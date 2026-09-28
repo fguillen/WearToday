@@ -53,6 +53,7 @@ The app should feel useful in under **10 seconds**, without requiring an account
 - Make a deterministic rules recommendation.
 - Render an hourly temperature/apparent-temperature line plus precipitation-probability bars.
 - Handle loading, stale, network, and API error states gracefully.
+- Installable Progressive Web App: a web app manifest and a service worker that precaches the app shell, so the app opens offline and shows today’s last saved forecast.
 - Unit and DOM/integration tests with Vitest.
 
 ### Explicitly out of scope for v1
@@ -352,7 +353,7 @@ Implement `fetchBerlinForecast({ signal } = {})` in `weather-service.js`.
 - Use `fetch` with an `AbortController` and an 8-second timeout.
 - Throw a typed `WeatherServiceError` with a safe user-facing message for non-OK responses, invalid JSON, and malformed payloads.
 - Normalize every API response into an application-owned forecast structure; components must not consume provider JSON directly.
-- Cache the normalized result plus `fetchedAt` in `sessionStorage` for 15 minutes. This avoids needless calls while remaining fresh enough for a morning check.
+- Cache the normalized result plus `fetchedAt` in `localStorage` for 15 minutes (so an installed app reopened offline still shows today’s last forecast). This avoids needless calls while remaining fresh enough for a morning check.
 - Include a **Refresh** button. It bypasses the cache, aborts a prior in-flight request, and sets `aria-busy="true"` on the weather region.
 - If the explicit `dwd_icon_d2` request fails because of an availability issue, retry once with `models=auto`; annotate the developer-only normalized source as `auto`. Do not expose technical model names in the parent UI.
 - Do not store weather data remotely.

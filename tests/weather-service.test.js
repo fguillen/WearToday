@@ -122,10 +122,10 @@ describe('fetchBerlinForecast', () => {
 });
 
 describe('forecast cache', () => {
-  it('stores and reads a fresh forecast from sessionStorage', () => {
+  it('stores and reads a fresh forecast from localStorage', () => {
     const forecast = normalizedScenario('cold-rain', { fetchedAt: NOW.toISOString() });
     writeCachedForecast(forecast);
-    expect(sessionStorage.getItem(CACHE_KEY)).toContain('"fetchedAt"');
+    expect(localStorage.getItem(CACHE_KEY)).toContain('"fetchedAt"');
 
     const cached = readCachedForecast({ now: () => new Date(NOW.getTime() + 5 * 60_000) });
     expect(cached.isFresh).toBe(true);

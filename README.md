@@ -28,6 +28,9 @@ Live at **https://fguillen.github.io/ToddlerOutfitAdvisor/**.
 - **Handles bad connections.** Requests time out after 8 seconds and fall
   back to a second weather model. The last saved forecast is shown, marked as
   outdated, while a new one loads or if loading fails.
+- **Installable and offline-ready.** A Progressive Web App: add it to the
+  home screen and it opens full screen, loads without a connection, and
+  shows today's last saved forecast when offline.
 - **Private.** No accounts, analytics, cookies or backend. The only network
   request goes to the weather API.
 - **No framework.** Plain JavaScript, Vite and Vitest.
@@ -137,6 +140,24 @@ If the site is served from a subpath, for example
 ```bash
 npx vite build --base=/<repo>/
 ```
+
+### Progressive Web App
+
+[`vite-plugin-pwa`](https://vite-pwa-org.netlify.app/) generates the web app
+manifest and a service worker that precaches the app shell, fonts and icons.
+The forecast itself is not cached by the service worker. The app keeps today's
+last forecast in `localStorage`, so offline launches show it as outdated.
+New deployments update installed apps silently; the next launch runs the new
+version.
+
+The service worker only exists in production builds. To try installing and
+going offline locally, use `npm run build && npm run preview`, not
+`npm run dev`.
+
+The icons in `public/` were generated once from `public/icon.svg` with
+[`@vite-pwa/assets-generator`](https://vite-pwa-org.netlify.app/assets-generator/),
+full-bleed with no padding and a sky-blue background for the maskable and
+Apple icons.
 
 ## Weather data
 

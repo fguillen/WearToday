@@ -6,7 +6,7 @@ export const FORECAST_ENDPOINT = 'https://api.open-meteo.com/v1/forecast';
 export const PRIMARY_MODEL = 'dwd_icon_d2';
 export const FALLBACK_MODEL = 'auto';
 export const WEATHER_TIMEOUT_MS = 8000;
-export const CACHE_KEY = 'toddler-outfit-advisor:forecast:v1';
+export const CACHE_KEY = 'toddler-outfit-advisor:forecast:v2';
 
 const CURRENT_FIELDS = [
   'temperature_2m',
@@ -132,7 +132,7 @@ export async function fetchBerlinForecast({
 function safeStorage(storage) {
   if (storage !== undefined) return storage;
   try {
-    return globalThis.sessionStorage ?? null;
+    return globalThis.localStorage ?? null;
   } catch {
     return null;
   }
