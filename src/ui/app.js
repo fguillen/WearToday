@@ -136,6 +136,7 @@ function renderForecastSection(weather, daySummary, currentIndex) {
     <ul class="legend">
       <li><span class="swatch swatch-line" aria-hidden="true"></span>${escapeHtml(copy.legendTemperature)}</li>
       <li><span class="swatch swatch-bar" aria-hidden="true"></span>${escapeHtml(copy.legendRain)}</li>
+      <li><span class="swatch swatch-mm" aria-hidden="true">0.4</span>${escapeHtml(copy.legendRainAmount)}</li>
       ${nowLegend}
     </ul>
     <div class="chart-container" id="chart-wrap">

@@ -1,11 +1,13 @@
 import { copy, formatters } from '../copy.js';
 import { feelsLike, getWeatherMeta } from '../domain/forecast.js';
 import { escapeHtml } from './html.js';
+import { weatherIcon } from './icons.js';
 
 // Canvas 2D chart plus an accessible table built from the same hours.
 
 const PADDING = { top: 36, right: 38, bottom: 48, left: 34 };
 const GLYPH_WIDTH_PX = 26;
+const MM_LABEL_WIDTH_PX = 24;
 const FONT_FAMILY = '"Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif';
 const font = (weight, size) => `${weight} ${size}px ${FONT_FAMILY}`;
 
@@ -168,6 +170,28 @@ export function drawHourlyChart(canvas, hours, { currentIndex = -1 } = {}) {
     ctx.fill();
   });
 
+  // Rain amount (mm) above each bar, haloed so it reads over grid and bands.
+  // Rain hours are sparse, so labels are thinned greedily rather than by modulo.
+  const mmEvery = Math.ceil(MM_LABEL_WIDTH_PX / slot);
+  let lastMmIndex = -Infinity;
+  ctx.font = font(700, 10);
+  ctx.textAlign = 'center';
+  ctx.lineWidth = 3;
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = colors.card;
+  ctx.fillStyle = colors.rain;
+  hours.forEach((hour, index) => {
+    const mm = hour.precipitationMm;
+    if (!(mm >= 0.1) || index - lastMmIndex < mmEvery) return;
+    const barTop = yRain(hour.precipitationProbabilityPercent ?? 0);
+    const y = Math.max(barTop - 7, plot.top + 7);
+    const label = formatters.rainMmShort(mm);
+    ctx.strokeText(label, xCenter(index), y);
+    ctx.fillText(label, xCenter(index), y);
+    lastMmIndex = index;
+  });
+  ctx.font = font(600, 11);
+
   // Feels-like line.
   ctx.strokeStyle = colors.temperature;
   ctx.lineWidth = 3;
@@ -240,17 +264,19 @@ export function drawHourlyChart(canvas, hours, { currentIndex = -1 } = {}) {
 }
 
 export function renderHourlyTable(hours, { currentIndex = -1 } = {}) {
-  const [time, feels, rain, condition, wind] = copy.tableColumns;
+  const [time, feels, rain, rainAmount, condition, wind] = copy.tableColumns;
   const rows = hours
     .map((hour, index) => {
       const feelsValue = feelsLike(hour);
+      const meta = getWeatherMeta(hour.weatherCode);
       const isNow = index === currentIndex;
       const rowAttrs = isNow ? ' class="is-now" aria-current="time"' : currentIndex > index ? ' class="is-past"' : '';
       return `<tr${rowAttrs}>
         <th scope="row">${escapeHtml(formatters.localHourLabel(hour.time))}${isNow ? ` <span class="now-tag">${escapeHtml(copy.nowMarker)}</span>` : ''}</th>
         <td>${Number.isFinite(feelsValue) ? `${Math.round(feelsValue)}°C` : '–'}</td>
         <td>${hour.precipitationProbabilityPercent ?? '–'}${hour.precipitationProbabilityPercent !== null ? '%' : ''}</td>
-        <td>${escapeHtml(getWeatherMeta(hour.weatherCode).label)}</td>
+        <td>${formatters.rainMm(hour.precipitationMm)}</td>
+        <td><span class="condition">${weatherIcon(meta.icon, 'condition-icon')}${escapeHtml(meta.label)}</span></td>
         <td>${hour.windKmh !== null ? `${Math.round(hour.windKmh)} km/h` : '–'}</td>
       </tr>`;
     })
@@ -262,7 +288,7 @@ export function renderHourlyTable(hours, { currentIndex = -1 } = {}) {
         <caption>${hours.length ? escapeHtml(copy.tableCaption(formatters.localHourLabel(hours[0].time), formatters.localHourLabel(hours.at(-1).time))) : ''}</caption>
         <thead><tr>
           <th scope="col">${time}</th><th scope="col">${feels}</th><th scope="col">${rain}</th>
-          <th scope="col">${condition}</th><th scope="col">${wind}</th>
+          <th scope="col">${rainAmount}</th>          <th scope="col">${condition}</th><th scope="col">${wind}</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>

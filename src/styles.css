@@ -606,6 +606,14 @@ ul {
   background: var(--clr-sky);
 }
 
+.swatch-mm {
+  width: auto;
+  height: auto;
+  color: var(--clr-sky-strong);
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
 .swatch-past {
   box-shadow: inset 0 0 0 1px var(--clr-grid);
   background: var(--clr-surface);
@@ -660,6 +668,8 @@ ul {
 }
 
 .hourly-table thead th {
+  white-space: normal;
+  vertical-align: bottom;
   color: var(--clr-muted);
   font-size: 0.75rem;
   letter-spacing: 0.04em;
@@ -687,6 +697,13 @@ ul {
   background: var(--clr-accent);
   font-size: 0.75rem;
   font-weight: 800;
+}
+
+.condition-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  vertical-align: -4px;
 }
 
 /* "Before you go" note */

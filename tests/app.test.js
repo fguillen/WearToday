@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { copy } from '../src/copy.js';
+import { copy, formatters } from '../src/copy.js';
 import { WeatherServiceError } from '../src/services/weather-service.js';
 import { createApp } from '../src/ui/app.js';
 import { normalizedScenario } from './fixtures.js';
@@ -40,6 +40,14 @@ describe('app', () => {
     // 07:00–22:00: the whole tracked day, same data as the chart.
     expect(root.querySelectorAll('.hourly-table tbody tr')).toHaveLength(16);
     expect(drawChart.mock.calls[0][1]).toHaveLength(16);
+    // Table: rain amount column and an icon beside each condition.
+    const headers = [...root.querySelectorAll('.hourly-table thead th')].map((th) => th.textContent);
+    expect(headers).toEqual(copy.tableColumns);
+    const tableRows = [...root.querySelectorAll('.hourly-table tbody tr')];
+    expect(tableRows.every((row) => row.children.length === 6)).toBe(true);
+    expect(tableRows.some((row) => /^\d+\.\d mm$/.test(row.children[3].textContent))).toBe(true);
+    expect(tableRows.every((row) => row.children[4].querySelector('svg.condition-icon') && row.children[4].textContent.trim())).toBe(true);
+    expect($('.legend').textContent).toContain(copy.legendRainAmount);
     expect($('.snapshot').textContent).not.toMatch(/kindergarten/i);
     // Hero: daily high/low plus rain and warmest-hour alerts for the hours ahead.
     const pills = [...root.querySelectorAll('.temp-range li, .weather-alerts li')].map((li) => li.textContent);
@@ -187,5 +195,12 @@ describe('app', () => {
     await app.start();
     expect(root.querySelector('#chart-unavailable').hidden).toBe(false);
     expect(root.querySelector('.hourly-table')).not.toBeNull();
+  });
+});
+
+describe('rain formatters', () => {
+  it('formats table and chart rain amounts', () => {
+    expect([null, 0, 0.4, 12.3].map(formatters.rainMm)).toEqual(['–', '0 mm', '0.4 mm', '12.3 mm']);
+    expect([0.4, 9.96, 12.3].map(formatters.rainMmShort)).toEqual(['0.4', '10', '12']);
   });
 });

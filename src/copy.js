@@ -85,17 +85,18 @@ export const copy = {
 
   // Forecast section
   forecastHeading: 'Today, hour by hour',
-  chartTitle: 'Hourly forecast — apparent temperature and rain chance',
-  chartAlt: 'Chart of feels-like temperature and chance of rain per hour. The same data is in the table below.',
+  chartTitle: 'Hourly forecast — apparent temperature, rain chance and rain amount',
+  chartAlt: 'Chart of feels-like temperature, chance of rain and rain amount in millimetres per hour. The same data is in the table below.',
   legendTemperature: 'Feels like °C',
   legendRain: 'Rain chance %',
+  legendRainAmount: 'Rain mm',
   legendPast: 'Past hours',
   legendNow: (time) => `Now ${time}`,
   nowMarker: 'Now',
   chartUnavailable: 'The chart could not be drawn on this device. The table below shows the same forecast.',
   tableSummary: 'View the hourly forecast as a table',
   tableCaption: (start, end) => `Hourly forecast, ${start}–${end}`,
-  tableColumns: ['Time', 'Feels like', 'Rain chance', 'Condition', 'Wind'],
+  tableColumns: ['Time', 'Feels like', 'Rain chance', 'Rain amount', 'Condition', 'Wind'],
 
   // Tips + footer
   tipsHeading: 'Before you go…',
@@ -108,6 +109,9 @@ export const copy = {
 
 export const formatters = {
   temperature: (value) => (Number.isFinite(value) ? String(Math.round(value)) : '–'),
+  rainMm: (value) => (Number.isFinite(value) ? (value === 0 ? '0 mm' : `${value.toFixed(1)} mm`) : '–'),
+  // Chart labels: no unit, and whole millimetres from 10 mm up to stay narrow.
+  rainMmShort: (value) => (Math.round(value * 10) < 100 ? value.toFixed(1) : String(Math.round(value))),
 
   // fetchedAt is a UTC ISO string; show it as Berlin wall-clock time.
   clockTime(isoString) {
