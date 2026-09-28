@@ -1,0 +1,4 @@
+- https://play.google.com/store/apps/details?id=nl.diecke.wtw&hl=en
+- https://weatherfit.com/
+- https://wearforweather.com/
+- https://wardrowbe.com/what-to-wear-today/
