@@ -6,7 +6,7 @@ export const TIMEZONE = 'Europe/Berlin';
 const pad = (value) => String(value).padStart(2, '0');
 
 export const copy = {
-  brand: 'Ready for Kindergarten',
+  brand: 'Ready to go',
   locationLabel: 'Berlin',
   refresh: 'Refresh',
   refreshing: 'Refreshing…',

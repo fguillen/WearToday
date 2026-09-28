@@ -475,7 +475,7 @@ Create a warm, calm, modern interface for a busy parent. It should be playful en
 
 ```text
 <header>
-  Brand: “Ready for Kindergarten”
+  Brand: “Ready to go”
   Location: Berlin · Updated 07:12
   [Refresh]
 </header>
@@ -483,16 +483,14 @@ Create a warm, calm, modern interface for a busy parent. It should be playful en
 <main>
   <section aria-labelledby="today-heading">                 // Weather snapshot
     Today in Berlin · Friday, 25 September
-    10°C now · feels like 8°C · Overcast
-    “We track the whole day, 07:00–22:00, hour by hour. The outfit covers 09:00–22:00.”
+    10° · Feels like 8° · Overcast
+    High/Low pills · alert pills · reason chips
   </section>
 
   <section aria-labelledby="outfit-heading">                // Primary recommendation
     “Put on today”
-    Large composable child/outfit illustration
     Cold & rainy
-    Garment checklist
-    Reason chips
+    Garment checklist + composable child/outfit illustration
     [View decision details]
   </section>
 
@@ -514,7 +512,7 @@ Create a warm, calm, modern interface for a busy parent. It should be playful en
 </footer>
 ```
 
-**All widths:** one centred column, at most 600px wide, in the order above. The snapshot lives in the sky-blue hero together with the brand and Refresh button: big current temperature, “Feels like … · condition”, `Berlin · Updated …`, High/Low pills, and alert pills for the hours still ahead (rain chance when rain is likely, warmest hour). The reason chips sit directly above the outfit card. The hour-by-hour section carries the “We track the whole day…” note. The graphic must be clearly readable without pinch zoom.
+**All widths:** one centred column, at most 600px wide, in the order above. The snapshot lives in the sky-blue hero together with the brand and Refresh button: big current temperature, “Feels like … · condition”, `Berlin · Updated …`, High/Low pills, and alert pills for the hours still ahead (rain chance when rain is likely, warmest hour), followed by the outfit’s reason chips in the same pill style. The hour-by-hour section carries the “We track the whole day…” note. The graphic must be clearly readable without pinch zoom.
 
 ### 7.3 Recommendation card
 
@@ -523,7 +521,7 @@ The recommendation card is the visual focal point.
 - Header: `PUT ON TODAY` in small uppercase letter spacing; then friendly outfit name.
 - Illustration: a neutral, simple child silhouette with layered SVG elements. Each `visualLayer` in the catalog maps to an SVG `<g>` with meaningful `aria-label` text and a distinct garment color/shape.
 - Garment checklist: garments grouped into rows by body zone (Head, Top, Legs, Feet, Carry) with a short hint per zone; each garment is a white pill with an inline SVG garment icon and text.
-- Reason chips: maximum three, generated from `daySummary.reasons`. Examples:
+- Reason chips (shown in the hero, see 7.2): maximum three, generated from `daySummary.reasons`. Examples:
   - `Feels like 7°C in the morning`
   - `Rain likely in the afternoon`
   - `Breezy — up to 22 km/h`

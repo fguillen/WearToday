@@ -243,7 +243,8 @@ ul {
 }
 
 .temp-range,
-.weather-alerts {
+.weather-alerts,
+.chips {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -254,12 +255,14 @@ ul {
   margin-top: var(--space-md);
 }
 
-.weather-alerts {
+.weather-alerts,
+.chips {
   margin-top: var(--space-sm);
 }
 
 .range-pill,
-.alert-pill {
+.alert-pill,
+.chip {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -271,7 +274,8 @@ ul {
 }
 
 .range-pill svg,
-.alert-pill svg {
+.alert-pill svg,
+.chip svg {
   width: 14px;
   height: 14px;
   flex: none;
@@ -342,34 +346,6 @@ ul {
   margin-top: var(--space-xs);
   color: var(--clr-muted);
   font-size: 0.875rem;
-}
-
-/* Reason chips */
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-lg);
-}
-
-.chip {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 14px;
-  border: 1px solid var(--clr-border);
-  border-radius: var(--radius-pill);
-  background: var(--clr-bg);
-  color: var(--clr-muted);
-  font-size: 0.8125rem;
-  font-weight: 600;
-}
-
-.chip svg {
-  width: 14px;
-  height: 14px;
-  flex: none;
-  color: var(--clr-accent-strong);
 }
 
 /* Outfit card */

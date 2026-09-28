@@ -108,11 +108,6 @@ export function renderRecommendationCard({ outfit, recommendation, daySummary, w
     return `<div class="outfit-card">${cardHeader(null)}${body}</div>`;
   }
 
-  const reasons = recommendation.reasons
-    .slice(0, 3)
-    .map((reason) => `<li class="chip">${icon('sparkle')}${escapeHtml(reason)}</li>`)
-    .join('');
-
   const addOns = recommendation.addOns
     .map((id) => ADD_ONS[id])
     .filter(Boolean)
@@ -120,7 +115,6 @@ export function renderRecommendationCard({ outfit, recommendation, daySummary, w
     .join('');
 
   return `
-    <ul class="chips" aria-label="${escapeHtml(copy.reasonsLabel)}">${reasons}</ul>
     <div class="outfit-card">
       ${cardHeader(outfit)}
       ${addOns}
