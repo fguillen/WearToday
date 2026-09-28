@@ -101,8 +101,8 @@ The app should feel useful in under **10 seconds**, without requiring an account
 ### Bootstrap commands
 
 ```bash
-npm create vite@latest toddler-outfit-advisor -- --template vanilla
-cd toddler-outfit-advisor
+npm create vite@latest wear-today -- --template vanilla
+cd wear-today
 npm install
 npm install --save-dev vitest jsdom
 ```
@@ -124,7 +124,7 @@ Add these npm scripts while retaining Vite’s normal scripts:
 ### Required project structure
 
 ```text
-toddler-outfit-advisor/
+wear-today/
 ├── index.html
 ├── package.json
 ├── vite.config.js

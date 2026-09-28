@@ -11,7 +11,7 @@ reasons behind the choice ("Feels like 7°C in the morning", "Rain is likely
 It is a suggestion, not a safety guarantee. You still decide, keeping in
 mind how you feel, the day's plans and any dress rules.
 
-Live at **https://fguillen.github.io/ToddlerOutfitAdvisor/**.
+Live at **https://fguillen.github.io/WearToday/**.
 
 ## Features
 
@@ -65,7 +65,7 @@ one of these).
 
 ```bash
 git clone <this-repo-url>
-cd ToddlerOutfitAdvisor
+cd WearToday
 npm install
 npm run dev
 ```
@@ -122,9 +122,9 @@ PRODUCT.md                  Full product and design specification
 ## Deployment
 
 The live site is served by GitHub Pages at
-https://fguillen.github.io/ToddlerOutfitAdvisor/. Every push to `main` runs
+https://fguillen.github.io/WearToday/. Every push to `main` runs
 [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml), which runs the
-tests, builds with `--base=/ToddlerOutfitAdvisor/` and publishes `dist/`. It
+tests, builds with `--base=/WearToday/` and publishes `dist/`. It
 can also be started by hand from the repository's Actions tab.
 
 To host it somewhere else: the build output is a static site, so any static host works (GitHub Pages,
