@@ -35,24 +35,12 @@ export const copy = {
   illustrationLabel: (label, garments) => `Illustration: ${label} outfit — ${garments.join(', ')}`,
   decisionDetails: 'View decision details',
   sourceRules: 'Weather rules',
-  sourceAiAccepted: 'AI decision checked against weather rules',
-  sourceAiRejected: 'Weather rules used because the AI result was uncertain',
-  aiRejectedStatus:
-    'Weather rules selected this outfit because the AI result was uncertain. You can still review the forecast below.',
-  aiFailed: 'The AI decision could not be loaded. Weather rules are still active.',
-  aiAcceptedDetail: (percent) => `AI decision used · confidence ${percent}% · checked against local weather rules.`,
-  aiRejectedDetail: 'The AI suggestion did not pass the local weather check, so the weather rules decided.',
-  aiNotRequestedDetail: 'Chosen by local weather rules. No AI was used.',
+  rulesDetail: 'Chosen by local weather rules.',
   detailWindow: (start, end, count) => `Checked ${start}–${end} (${count} hours).`,
   detailFeels: (min, max) => `Feels like ${min}°C to ${max}°C.`,
   detailRain: (percent, mm) => `Rain chance up to ${percent}% · ${mm} mm expected.`,
   detailWind: (kmh) => `Wind up to ${kmh} km/h.`,
   detailSun: (percent) => `Mostly clear skies ${percent}% of the hours.`,
-  useAiDecision: 'Use AI decision',
-  checkingOptions: 'Checking the options…',
-  changeKey: 'Change key',
-  forgetKey: 'Forget key',
-  keyForgotten: 'Key forgotten. Weather rules are active.',
 
   // Reasons (short chips)
   reasonFeelsLike: (temp, when) => `Feels like ${temp}°C ${when}`,
@@ -88,19 +76,8 @@ export const copy = {
   tipsText: 'Forecasts can change. Consider your child’s comfort, activity, and kindergarten rules.',
   footer: 'Weather data: Open-Meteo / DWD (CC BY 4.0) · Forecasts are estimates',
 
-  // Key dialog
-  keyDialogTitle: 'Use an AI decision',
-  keyDialogWarning:
-    'This prototype sends the key directly from your browser to OpenRouter. Use a separate key with a small credit limit. The app keeps it only until this tab is closed or you choose Forget key.',
-  keyLabel: 'OpenRouter API key',
-  showKey: 'Show key',
-  hideKey: 'Hide key',
-  keyRequired: 'Enter a key, or choose Skip to keep using the weather rules.',
-  skipAi: 'Skip AI — use weather rules',
-
   // Live announcements
-  announceForecastUpdated: (time) => `Forecast updated at ${time}.`,
-  announceRecommendation: (label, source) => `Recommendation: ${label}. ${source}.`
+  announceForecastUpdated: (time) => `Forecast updated at ${time}.`
 };
 
 export const formatters = {

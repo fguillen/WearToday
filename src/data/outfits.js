@@ -1,5 +1,5 @@
 // Canonical outfit catalog. This is the single source of garment names for the
-// UI, the rules engine, the AI request, and the tests.
+// UI, the rules engine, and the tests.
 
 export const OUTFITS = [
   {
@@ -8,8 +8,7 @@ export const OUTFITS = [
     description: 'Light clothes for a dry, warm, sunny kindergarten day.',
     garments: ['Short-sleeve T-shirt', 'Shorts', 'Sandals'],
     visualLayers: ['shortTee', 'shorts', 'sandals'],
-    tags: ['dry', 'warm', 'sunny'],
-    decisionCriteria: 'Use only when the day is dry, hot, and mostly sunny during the assessment window.'
+    tags: ['dry', 'warm', 'sunny']
   },
   {
     id: 'mild-dry',
@@ -17,8 +16,7 @@ export const OUTFITS = [
     description: 'Layers for a mild, cloudy or partly cloudy dry day.',
     garments: ['Long pants', 'Long-sleeve T-shirt', 'Sweater', 'Socks', 'Closed shoes'],
     visualLayers: ['longTee', 'sweater', 'longPants', 'socks', 'shoes'],
-    tags: ['dry', 'mild'],
-    decisionCriteria: 'Use for a dry mild day that does not require a jacket.'
+    tags: ['dry', 'mild']
   },
   {
     id: 'fresh-dry',
@@ -26,8 +24,7 @@ export const OUTFITS = [
     description: 'A warmer outer layer for a fresh dry day.',
     garments: ['Long pants', 'Long-sleeve T-shirt', 'Sweater', 'Jacket', 'Socks', 'Closed shoes'],
     visualLayers: ['longTee', 'sweater', 'jacket', 'longPants', 'socks', 'shoes'],
-    tags: ['dry', 'fresh'],
-    decisionCriteria: 'Use for a dry fresh day needing a jacket but not scarf and hat.'
+    tags: ['dry', 'fresh']
   },
   {
     id: 'cold-dry',
@@ -35,8 +32,7 @@ export const OUTFITS = [
     description: 'Warm layers with head and neck protection for a cold dry day.',
     garments: ['Long pants', 'Long-sleeve T-shirt', 'Sweater', 'Jacket', 'Scarf', 'Hat', 'Socks', 'Closed shoes'],
     visualLayers: ['longTee', 'sweater', 'jacket', 'longPants', 'scarf', 'hat', 'socks', 'shoes'],
-    tags: ['dry', 'cold'],
-    decisionCriteria: 'Use for a cold dry day needing jacket, scarf, and hat.'
+    tags: ['dry', 'cold']
   },
   {
     id: 'cold-rain',
@@ -44,8 +40,7 @@ export const OUTFITS = [
     description: 'Warm, rain-ready layers for a cold wet day.',
     garments: ['Long pants', 'Long-sleeve T-shirt', 'Sweater', 'Jacket', 'Scarf', 'Hat', 'Umbrella', 'Socks', 'Waterproof shoes', 'Rain pants'],
     visualLayers: ['longTee', 'sweater', 'jacket', 'longPants', 'scarf', 'hat', 'socks', 'waterproofShoes', 'rainPants', 'umbrella'],
-    tags: ['rain', 'cold'],
-    decisionCriteria: 'Use for a cold wet day needing rain protection plus warm layers.'
+    tags: ['rain', 'cold']
   }
 ];
 

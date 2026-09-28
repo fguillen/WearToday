@@ -16,7 +16,6 @@ export const DEFAULTS = Object.freeze({
   rainProbabilityThreshold: 50,
   rainAmountThresholdMm: 0.3,
   coldRainMaximumApparentC: 12,
-  minimumAiConfidence: 0.6,
   cacheMinutes: 15
 });
 

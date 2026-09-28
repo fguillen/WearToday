@@ -4,7 +4,7 @@
 >
 > **Implementation target:** Vanilla JavaScript (ECMAScript 2025), Vite, Vitest, and no TypeScript.
 >
-> **Important naming clarification:** this document interprets “OpenRoute API key” in the brief as an **OpenRouter API key**. The weather service specified below, Open-Meteo, does **not** need an API key for this non-commercial prototype.
+> The weather service specified below, Open-Meteo, does **not** need an API key for this non-commercial prototype. The app uses no AI service.
 
 ---
 
@@ -17,7 +17,7 @@
 3. a graphic, hour-by-hour view of today’s weather; and
 4. short, transparent reasons such as “Chilly at drop-off” and “Rain likely after lunch.”
 
-The app uses a local, deterministic safety layer plus **Jev** through OpenRouter to select from predefined outfits. Jev is a typed decision model: it selects one allowed option and returns probabilities, rather than generating arbitrary prose. That makes it appropriate for a constrained recommendation workflow, but the app must never treat it as a safety authority or medical advice.
+The app uses local, deterministic weather rules to select from predefined outfits. The recommendation is guidance, never a safety authority or medical advice.
 
 ### 1.1 Target user and morning flow
 
@@ -25,18 +25,17 @@ The primary user is a parent at home in the morning, likely using a phone.
 
 1. Open the app.
 2. See today’s Berlin forecast and the default weather-rules recommendation immediately.
-3. Optionally enter an OpenRouter key in a session-only prompt to get the Jev decision.
-4. Read the prominent outfit illustration, garment checklist, and “why” chips.
-5. Check the hourly chart if a rain or temperature change is expected later.
-6. Make the final parent decision.
+3. Read the prominent outfit illustration, garment checklist, and “why” chips.
+4. Check the hourly chart if a rain or temperature change is expected later.
+5. Make the final parent decision.
 
 The app should feel useful in under **10 seconds**, without requiring an account or configuration before weather information appears.
 
 ### 1.2 Product principles
 
 - **One clear answer first.** The main recommendation is unmissable; details are available but secondary.
-- **No invented garments.** AI may choose only from the outfit catalog passed in the request.
-- **Conservative around rain and cold.** A local guardrail may reject an AI choice and use the deterministic fallback.
+- **No invented garments.** Recommendations come only from the outfit catalog.
+- **Conservative around rain and cold.** When rain and cold coincide, prefer the warmer, rain-ready outfit.
 - **Transparent rather than authoritative.** Show the actual weather signals used and communicate that a parent should consider the child, activity level, and kindergarten policy.
 - **Private by default.** No accounts, analytics, tracking, or server-side storage in the prototype.
 - **Mobile-first and accessible.** Large tap targets, readable contrast, keyboard usability, and a text alternative for every visual chart.
@@ -51,11 +50,9 @@ The app should feel useful in under **10 seconds**, without requiring an account
 - Fetch the current conditions and today’s hourly forecast.
 - Display a composable, in-app SVG outfit illustration — no third-party image assets required.
 - Display five parent-supplied canonical outfit combinations.
-- Make a deterministic rules recommendation without an AI key.
-- Prompt for an OpenRouter API key and call Jev when the user opts in.
-- Render Jev confidence and explain whether the local safety check accepted the AI result.
+- Make a deterministic rules recommendation.
 - Render an hourly temperature/apparent-temperature line plus precipitation-probability bars.
-- Handle loading, stale, network, API, invalid-key, and AI-unavailable states gracefully.
+- Handle loading, stale, network, and API error states gracefully.
 - Unit and DOM/integration tests with Vitest.
 
 ### Explicitly out of scope for v1
@@ -72,7 +69,6 @@ The app should feel useful in under **10 seconds**, without requiring an account
 - Location search and saved locations.
 - Parent-adjustable temperature/rain thresholds.
 - A visual editor for additional outfit combinations.
-- A tiny backend/edge proxy that protects the OpenRouter key.
 - Localization (start English; keep all visible strings in one `copy.js` module so German can be added cleanly).
 
 ---
@@ -87,19 +83,6 @@ The app should feel useful in under **10 seconds**, without requiring an account
 | **meteoblue Forecast API** | Strong multi-model/observation approach and forecast products, but requires an API key/trial and introduces client-side key-protection work in a pure frontend app. | Trial/free offering exists; paid usage is request/plan based. | Medium |
 
 **Prototype selection dictated by the brief:** use **Open-Meteo with `models=dwd_icon_d2`**. It best fits “cheap, precise for Berlin, pure frontend” because it requires no weather key. Open-Meteo documents ICON-D2 as roughly 2 km, 15-minute data for Central Europe with updates every three hours; the prototype renders the safer, easier-to-read hourly series.
-
-### 3.2 AI-key handling options
-
-| Approach | Trade-offs | Cost | Setup complexity |
-| --- | --- | ---: | --- |
-| **Browser-only, session-only key prompt** | Matches the stated first-prototype constraint. The bearer key is present in the user’s browser during the request, so this is appropriate only for a personal/local prototype or a key with a strict cap. | Jev usage plus any OpenRouter credit chosen by the key owner. | Low |
-| **Small server/edge proxy** | Keeps the key off the browser and is the correct direction for a shared or public deployment. Requires hosting and basic abuse controls. | Usually low hosting cost plus Jev usage. | Medium |
-
-**Prototype behavior:** implement the first option because the brief explicitly requires a pure frontend. Make the security limitation highly visible in the key dialog. Never persist the key, include it in source code, send it to logging, place it in a URL, or send it to the weather provider.
-
-> OpenRouter recommends a credit limit on every key and warns that unrestricted keys must be kept out of client code. A user running this prototype should create a **separate, low-credit-limit key** specifically for it. The key dialog must also offer **“Skip AI — use weather rules”**.
-
-**Mandatory implementation spike:** before treating the browser-only AI path as ready, make a manual cross-origin request from the Vite dev server with a disposable, capped key. If the browser blocks the request because of CORS or OpenRouter changes its policy, retain the fully usable weather-rules mode and defer Jev until a secure proxy exists. Do not attempt to bypass browser security.
 
 ---
 
@@ -152,27 +135,21 @@ toddler-outfit-advisor/
 │   │   └── outfits.js
 │   ├── domain/
 │   │   ├── forecast.js
-│   │   ├── recommendation.js
-│   │   └── validators.js
+│   │   └── recommendation.js
 │   ├── services/
-│   │   ├── weather-service.js
-│   │   ├── jev-service.js
-│   │   └── session-key.js
+│   │   └── weather-service.js
 │   └── ui/
 │       ├── app.js
 │       ├── recommendation-card.js
 │       ├── outfit-illustration.js
 │       ├── hourly-chart.js
-│       ├── key-dialog.js
 │       └── status-banner.js
 └── tests/
     ├── setup.js
     ├── fixtures.js
     ├── forecast.test.js
     ├── recommendation.test.js
-    ├── validators.test.js
     ├── weather-service.test.js
-    ├── jev-service.test.js
     └── app.test.js
 ```
 
@@ -194,7 +171,7 @@ Use stable IDs. Visible labels should be friendly and correct the obvious misspe
 | `cold-dry` | Cold & dry | Long pants; long-sleeve T-shirt; sweater; jacket; scarf; hat; socks; closed shoes |
 | `cold-rain` | Cold & rainy | Long pants; long-sleeve T-shirt; sweater; jacket; scarf; hat; umbrella; socks; waterproof shoes; rain pants |
 
-Define this once in `src/data/outfits.js` rather than duplicating garment strings in the UI, rules, tests, and AI prompt.
+Define this once in `src/data/outfits.js` rather than duplicating garment strings in the UI, rules, and tests.
 
 ```js
 export const OUTFITS = [
@@ -241,9 +218,9 @@ export const OUTFITS = [
 ];
 ```
 
-### 5.2 “Other combinations” without uncontrolled AI output
+### 5.2 “Other combinations”
 
-The initial catalog should be exactly the five combinations above. Build the data model to support additional records later, but **do not** ask Jev to invent extra garments in v1.
+The initial catalog should be exactly the five combinations above. Build the data model to support additional records later, but do not invent extra garments in v1.
 
 Later combinations can be added as catalog entries with the same fields. Examples to consider only after a parent specifies their actual wardrobe:
 
@@ -271,7 +248,6 @@ export const DEFAULTS = {
   rainProbabilityThreshold: 50,
   rainAmountThresholdMm: 0.3,
   coldRainMaximumApparentC: 12,
-  minimumAiConfidence: 0.60,
   cacheMinutes: 15
 };
 ```
@@ -317,27 +293,6 @@ Rules, in order:
 ```
 
 For a future warm-rain catalog, choose a dry base outfit using steps 5–8 then add rain gear. In v1, if rain is likely but not cold, preserve the nearest dry base outfit **and add a prominent “Pack rain gear” note**; do not force the `cold-rain` outfit on a warm day.
-
-### 5.5 Local safety validation of AI output
-
-The app must obtain and render a deterministic recommendation before it calls Jev. The AI result may replace it only when all checks pass.
-
-Reject the Jev output and retain the deterministic choice when any condition below applies:
-
-- the returned outfit ID is absent from `OUTFITS`;
-- `recommended_outfit.type !== 'choice'`;
-- `recommended_outfit.confidence < 0.60`;
-- the day is rainy and the AI selected an outfit without `rain` tag or the special warm-rain add-on path;
-- `minApparentC < 9` and the selected outfit does not include jacket, hat, and scarf;
-- `hotAndSunny` is true and the selected outfit has cold-only garments (jacket, scarf, or hat);
-- the rain-gate answer conflicts strongly with the local precipitation summary; or
-- the request fails, times out, parses incorrectly, or is blocked by the browser.
-
-Display a calm non-alarming status such as:
-
-> “Weather rules selected this outfit because the AI result was uncertain. You can still review the forecast below.”
-
-Never send a free-text prompt that permits the model to add garments, rewrite the catalog, or give health advice.
 
 ---
 
@@ -486,154 +441,9 @@ Use an `unknown` fallback for unmapped codes so an API update cannot break the U
 
 ---
 
-## 7. Jev/OpenRouter decision integration
+## 7. Interface specification
 
-### 7.1 Model and endpoint
-
-Use the pinned model ID **`typesafe/jev-1.13`**, not the moving `~typesafe/jev-latest` alias. The pinned ID protects calibrated threshold behavior within the prototype.
-
-```text
-POST https://openrouter.ai/api/alpha/decisions
-Authorization: Bearer <session-only OpenRouter key>
-Content-Type: application/json
-```
-
-Jev 1.13 is designed for typed choices, yes/no (`noul`), and ordered scores. At the time of this document, its published price is **$0.042 per million input tokens and $0 per million output tokens**. Treat the price as changeable: the app should display no hard-coded price claim.
-
-### 7.2 Session-only key UX and security
-
-Implement `session-key.js` as a module-private in-memory variable:
-
-```js
-let openRouterKey = '';
-
-export function setOpenRouterKey(value) {
-  openRouterKey = value.trim();
-}
-
-export function getOpenRouterKey() {
-  return openRouterKey;
-}
-
-export function clearOpenRouterKey() {
-  openRouterKey = '';
-}
-```
-
-**Do not put the key in** `localStorage`, `sessionStorage`, IndexedDB, cookies, `.env`, `import.meta.env`, HTML, Git, a URL, a status message, an exception, analytics, or `console.log`.
-
-Key dialog requirements:
-
-- Native `<dialog>` where supported, with a CSS fallback only if needed.
-- Password input, `autocomplete="off"`, explicit label, and show/hide control.
-- Copy: “This prototype sends the key directly from your browser to OpenRouter. Use a separate key with a small credit limit. The app keeps it only until this tab is closed or you choose Forget key.”
-- Buttons: **Use AI decision**, **Skip AI — use weather rules**, and **Forget key** after a key has been entered.
-- Do not automatically call Jev after a fresh key entry until a valid weather summary exists.
-- A failed key must yield a generic message: “The AI decision could not be loaded. Weather rules are still active.” Never echo a response body that could expose credentials.
-
-### 7.3 Decision request
-
-`buildJevRequest({ daySummary, outfits })` returns JSON serializable data. Keep the state minimal and factual. Do not send a child’s name, date of birth, exact location, or any other unnecessary personal data.
-
-```js
-{
-  model: 'typesafe/jev-1.13',
-  state: {
-    location: 'Berlin',
-    child_context: 'A toddler attends kindergarten. This app only chooses from the supplied outfits; the parent makes the final decision.',
-    assessment_window: '08:00–17:00 Europe/Berlin',
-    weather: {
-      min_apparent_c: 7.4,
-      max_apparent_c: 13.1,
-      rain_likely: true,
-      max_rain_probability_percent: 70,
-      precipitation_total_mm: 2.1,
-      sunny_fraction: 0.1,
-      max_wind_kmh: 22
-    },
-    available_outfits: {
-      'sunny-hot': 'Short-sleeve T-shirt, shorts, sandals. Dry, hot and sunny throughout the kindergarten day.',
-      'mild-dry': 'Long pants, long-sleeve T-shirt, sweater, socks and closed shoes. Mild and dry.',
-      'fresh-dry': 'Long pants, long-sleeve T-shirt, sweater, jacket, socks and closed shoes. Fresh and dry.',
-      'cold-dry': 'Long pants, long-sleeve T-shirt, sweater, jacket, scarf, hat, socks and closed shoes. Cold and dry.',
-      'cold-rain': 'Long pants, long-sleeve T-shirt, sweater, jacket, scarf, hat, umbrella, socks, waterproof shoes and rain pants. Cold and rainy.'
-    }
-  },
-  questions: {
-    recommended_outfit: {
-      type: 'choice',
-      instructions: 'Choose exactly one available outfit ID. Prefer rain protection when rain is likely and warmer layers when the apparent temperature is low. Never choose an ID not listed in the criteria.',
-      criteria: {
-        'sunny-hot': 'Use only when the day is dry, hot, and mostly sunny during the assessment window.',
-        'mild-dry': 'Use for a dry mild day that does not require a jacket.',
-        'fresh-dry': 'Use for a dry fresh day needing a jacket but not scarf and hat.',
-        'cold-dry': 'Use for a cold dry day needing jacket, scarf, and hat.',
-        'cold-rain': 'Use for a cold wet day needing rain protection plus warm layers.'
-      }
-    },
-    rain_gear_required: {
-      type: 'noul',
-      instructions: 'Is rain gear important for the kindergarten assessment window?',
-      criteria: {
-        true: 'Rain is likely or meaningful precipitation is forecast during the assessment window.',
-        false: 'Rain is not likely and little or no precipitation is forecast during the assessment window.'
-      }
-    },
-    warmth_level: {
-      type: 'score',
-      instructions: 'How much warmth is appropriate for the assessment window?',
-      criteria: [
-        'Light clothes only',
-        'Light layers',
-        'Jacket needed',
-        'Jacket, scarf, and hat needed'
-      ]
-    }
-  }
-}
-```
-
-### 7.4 Jev response handling
-
-Expected relevant response fields:
-
-```js
-{
-  answers: {
-    recommended_outfit: {
-      type: 'choice',
-      choice: 'cold-rain',
-      confidence: 0.82,
-      probabilities: { 'sunny-hot': 0, 'mild-dry': 0.02, 'fresh-dry': 0.05, 'cold-dry': 0.11, 'cold-rain': 0.82 }
-    },
-    rain_gear_required: { type: 'noul', noul: 0.97 },
-    warmth_level: { type: 'score', score: 2.89, confidence: 0.95 }
-  },
-  usage: { input_tokens: 0, output_tokens: 0, cost: 0 }
-}
-```
-
-Create a normalized `aiDecision` object containing only the outcome needed for UI and validation:
-
-```js
-{
-  requested: true,
-  accepted: true,
-  outfitId: 'cold-rain',
-  confidence: 0.82,
-  rainGearProbability: 0.97,
-  warmthScore: 2.89,
-  source: 'jev'
-}
-```
-
-Never show raw API payloads or token/cost details in the parent-facing interface. A compact `<details>` element may show: “AI decision used · confidence 82% · checked against local weather rules.”
-
----
-
-## 8. Interface specification
-
-### 8.1 Visual direction
+### 7.1 Visual direction
 
 Create a warm, calm, modern interface for a busy parent. It should be playful enough to feel child-adjacent but not cartoonish or cluttered.
 
@@ -663,7 +473,7 @@ Create a warm, calm, modern interface for a busy parent. It should be playful en
 - No external web fonts, remote icon kits, or image CDNs.
 - Respect `prefers-reduced-motion` and use no auto-playing animation.
 
-### 8.2 Page structure
+### 7.2 Page structure
 
 ```text
 <header>
@@ -686,7 +496,6 @@ Create a warm, calm, modern interface for a busy parent. It should be playful en
     Garment checklist
     Reason chips
     [View decision details]
-    [Use AI decision / Change key] [Forget key]
   </section>
 
   <section aria-labelledby="forecast-heading">              // Hourly evidence
@@ -705,15 +514,13 @@ Create a warm, calm, modern interface for a busy parent. It should be playful en
 <footer>
   Weather data: Open-Meteo / DWD · Forecasts are estimates
 </footer>
-
-<dialog id="key-dialog">…</dialog>
 ```
 
 **Desktop:** a two-column main grid where the outfit card is left and weather/chart card is right.
 
 **Mobile (< 760px):** one column in the exact order above. The recommendation card must be first after the snapshot. The graphic must be clearly readable without pinch zoom.
 
-### 8.3 Recommendation card
+### 7.3 Recommendation card
 
 The recommendation card is the visual focal point.
 
@@ -724,13 +531,10 @@ The recommendation card is the visual focal point.
   - `Feels like 7°C at drop-off`
   - `Rain likely after lunch`
   - `Breezy — up to 22 km/h`
-- Source/status line:
-  - `Weather rules` when no key / AI skipped.
-  - `AI decision checked against weather rules` when Jev is accepted.
-  - `Weather rules used because the AI result was uncertain` when it falls back.
+- Source line: `Weather rules`.
 - Do not display a child’s age in the card.
 
-### 8.4 Outfit illustration
+### 7.4 Outfit illustration
 
 Create the illustration with semantic SVG groups, not a single inaccessible image.
 
@@ -748,7 +552,7 @@ Implementation constraints:
 - Use a compact weather backdrop in the illustration (sun/cloud/rain), but not a second data source.
 - An umbrella must not hide garment layers or the accessible label.
 
-### 8.5 Hourly weather chart
+### 7.5 Hourly weather chart
 
 Use a `canvas` only after it has a textual equivalent.
 
@@ -766,42 +570,35 @@ Use a `canvas` only after it has a textual equivalent.
 
 **Accessible alternative:** a collapsed `<details>` named “View the hourly forecast as a table” with columns: time, feels like, rain chance, condition, wind. The table is also the fallback if canvas is unavailable.
 
-### 8.6 Loading and error states
+### 7.6 Loading and error states
 
 | Condition | UI behavior |
 | --- | --- |
 | Initial weather load | Skeleton for snapshot/card/chart, then live content. Never show a blank white page. |
 | Weather unavailable and cache exists | Show cached recommendation with `Last updated at …` and a retry button. |
-| Weather unavailable and no cache | Clear error card: “Today’s forecast could not load. Check your connection and try again.” Disable AI decision button. |
-| OpenRouter key absent | Weather-rules recommendation remains active. Show optional “Use AI decision” button. |
-| AI loading | Button becomes disabled `Checking the options…`; weather recommendation remains visible. |
-| Invalid/blocked/failed AI request | Keep weather-rules outcome, show generic non-secret failure text, and offer retry/forget key. |
-| AI output rejected by validator | Keep rules outcome and show the non-alarming fallback status. |
+| Weather unavailable and no cache | Clear error card: “Today’s forecast could not load. Check your connection and try again.” |
 
-### 8.7 Accessibility acceptance targets
+### 7.7 Accessibility acceptance targets
 
-- Keyboard navigation reaches Refresh, key controls, chart table disclosure, and all dialog controls in a logical order.
-- Focus is trapped in the key dialog; Escape closes it without saving a partial key.
+- Keyboard navigation reaches Refresh, decision details, and the chart table disclosure in a logical order.
 - Visible focus ring uses `--focus` with 3:1+ contrast to adjacent colors.
 - Buttons and icon controls have names.
 - Chart has a title, legend, accessible table, and no color-only meaning.
-- `aria-live="polite"` announces finished refresh and recommendation source changes; do not announce every animated/skeleton update.
+- `aria-live="polite"` announces a finished refresh; do not announce every animated/skeleton update.
 - Meet WCAG AA contrast for normal text. Test at 320px width and 200% browser zoom.
 
 ---
 
-## 9. Application state and data flow
+## 8. Application state and data flow
 
-### 9.1 State machine
+### 8.1 State machine
 
 Keep a single explicit state object in `ui/app.js`; do not make modules mutate the DOM from arbitrary callbacks.
 
 ```js
 const initialState = {
   weather: { status: 'idle', data: null, error: null, isStale: false },
-  recommendation: { source: 'rules', outfitId: null, addOns: [], reasons: [] },
-  ai: { status: 'not-requested', decision: null, error: null },
-  keyDialogOpen: false
+  recommendation: { source: 'rules', outfitId: null, addOns: [], reasons: [] }
 };
 ```
 
@@ -809,10 +606,9 @@ Status values:
 
 ```text
 weather.status: idle | loading | ready | error
-ai.status: not-requested | loading | accepted | rejected | error
 ```
 
-### 9.2 Startup path
+### 8.2 Startup path
 
 ```text
 1. Render static shell + loading state.
@@ -821,28 +617,24 @@ ai.status: not-requested | loading | accepted | rejected | error
 4. Normalize data and derive day summary.
 5. Run deterministic recommendation.
 6. Render snapshot, recommendation, reasons, illustration, chart, and table.
-7. If user has entered a session-only key during this tab lifetime, enable AI decision.
-8. Call Jev only after explicit user action; validate and re-render if accepted.
 ```
 
-### 9.3 Privacy-aware data flow
+### 8.3 Privacy-aware data flow
 
 ```mermaid
 flowchart LR
   A[Browser: Berlin coordinates] -->|Forecast request| B[Open-Meteo / DWD]
   B -->|Hourly forecast| A
-  A -->|Normalized weather summary + predefined outfit IDs| C[OpenRouter Jev]
-  C -->|Typed choice + probabilities| A
-  A -->|Local guardrail + rendered recommendation| D[Parent]
+  A -->|Rules-based recommendation| D[Parent]
 ```
 
-Only a forecast summary and predefined outfit descriptions go to OpenRouter. Do not send raw forecast arrays, browser data, child identity, stored preferences, or the API key to any third party other than OpenRouter.
+The only network request is the forecast request. Do not send browser data, child identity, or stored preferences to any third party.
 
 ---
 
-## 10. Test plan
+## 9. Test plan
 
-### 10.1 Unit tests
+### 9.1 Unit tests
 
 Use deterministic fixtures, never live APIs, in unit tests.
 
@@ -850,26 +642,19 @@ Use deterministic fixtures, never live APIs, in unit tests.
 | --- | --- |
 | `forecast.js` | Align parallel provider arrays by index; select only 08:00–17:00 Berlin hours; map known and unknown WMO codes; handle missing optional values. |
 | `recommendation.js` | Hot/sunny/dry → `sunny-hot`; mild/dry → `mild-dry`; fresh/dry → `fresh-dry`; cold/dry → `cold-dry`; cold/rainy → `cold-rain`; warm/rainy → dry base with rain-gear add-on. |
-| `validators.js` | Reject absent ID, low confidence, rain-inadequate choice, cold-inadequate choice, hot over-layered choice, and invalid response shape. |
 | `weather-service.js` | Correct `URLSearchParams`; normalized success response; API error; malformed payload; 8-second abort; one DWD-to-auto fallback. |
-| `jev-service.js` | Correct endpoint/headers/body shape; never include key in errors; response normalization; HTTP failure; malformed response. |
-| `session-key.js` | Key is readable after set, is cleared correctly, and is not serialized to browser storage. |
 
-### 10.2 DOM/integration tests
+### 9.2 DOM/integration tests
 
 With `jsdom` and mocked services:
 
 - Initial state includes an accessible loading indicator.
 - A successful forecast renders the location, updated time, outfit label, garment list, reasons, and hourly-table rows.
 - The Refresh button triggers a fresh fetch.
-- Clicking “Use AI decision” opens an accessible dialog.
-- Choosing “Skip AI” leaves the rules recommendation untouched.
-- An accepted AI selection changes the source text but only to a catalog outfit.
-- A rejected AI selection leaves the fallback outfit visible and shows the proper status.
-- A weather failure shows retry/error content and does not call Jev.
+- A weather failure shows retry/error content.
 - Canvas failure still leaves the hourly-table disclosure available.
 
-### 10.3 Manual acceptance checklist
+### 9.3 Manual acceptance checklist
 
 Run before handoff:
 
@@ -882,62 +667,47 @@ npm run dev
 Then manually verify in a browser:
 
 - 320px-wide phone viewport, standard desktop viewport, and 200% zoom.
-- keyboard-only interaction and Escape behavior in dialog.
+- keyboard-only interaction.
 - normal, cloudy/dry, cold/dry, cold/rainy, and warm/rainy fixtures via a development-only fixture switch.
 - slow network/disabled network while a cache is present and absent.
-- invalid OpenRouter key and skipped AI path.
-- a disposable, credit-capped real key for the CORS viability spike only.
-- that browser DevTools storage contains no OpenRouter key and page source/build output contains no key.
 
 ---
 
-## 11. Definition of done
+## 10. Definition of done
 
 The prototype is complete when all of the following are true:
 
 1. `npm run build` completes successfully.
-2. `npm run test` completes successfully with coverage of all outfit branches and guardrail rejects.
-3. With no AI key, the application still loads Berlin weather and selects a rules-based outfit.
+2. `npm run test` completes successfully with coverage of all outfit branches.
+3. The application loads Berlin weather and selects a rules-based outfit.
 4. The hourly chart and accessible table use the same normalized forecast data.
 5. The five supplied outfit combinations appear correctly with accurate garment lists and SVG layers.
-6. The app prompts for an **OpenRouter** key only when the user requests AI assistance, retains it in memory only, and offers a skip path.
-7. The Jev request uses `typesafe/jev-1.13` and the Decisions endpoint, then validates the typed result locally.
-8. AI failure never prevents a parent from seeing a deterministic recommendation.
-9. UI error states are clear, non-technical, and never reveal a key or raw provider response.
-10. Attribution to Open-Meteo/DWD appears in the footer, consistent with the provider’s CC BY attribution requirement.
+6. UI error states are clear, non-technical, and never reveal a raw provider response.
+7. Attribution to Open-Meteo/DWD appears in the footer, consistent with the provider’s CC BY attribution requirement.
 
 ---
 
-## 12. Implementation sequence for Claude Code
+## 11. Implementation sequence for Claude Code
 
 1. **Scaffold only.** Create the Vite vanilla project, install Vitest/jsdom, add the file structure, scripts, test configuration, and an empty static shell.
-2. **Build the domain first.** Implement fixtures, WMO mapping, normalizer, day summary, rules engine, and AI validators with passing tests before adding styled UI.
+2. **Build the domain first.** Implement fixtures, WMO mapping, normalizer, day summary, and rules engine with passing tests before adding styled UI.
 3. **Integrate weather.** Add the Open-Meteo DWD request, caching, timeout/fallback, errors, and a live Berlin smoke-test path. Keep weather code separate from rendering.
 4. **Build the core UI.** Add responsive snapshot, recommendation card, garment checklist, composable SVG illustration, reason chips, and hourly chart/table.
-5. **Add Jev carefully.** Create the session-only key dialog and `jev-service.js`; add mock-driven tests first; then perform the limited real, capped-key CORS viability check.
-6. **Wire safety and status.** Run deterministic rules before AI; only render an AI choice after the local validator accepts it.
-7. **Finish accessibility and polish.** Test keyboard flow, focus, contrast, resize, reduced motion, and empty/error states.
-8. **Run final checks.** Run build and tests; confirm no secret is present in storage or source output.
+5. **Finish accessibility and polish.** Test keyboard flow, focus, contrast, resize, reduced motion, and empty/error states.
+6. **Run final checks.** Run build and tests.
 
 ### Claude Code guardrails
 
 - Use **only vanilla JavaScript**, HTML, and CSS. Do not introduce TypeScript, React, a state-management library, a chart library, an icon library, or an image CDN.
-- Do not replace the local rules engine with an AI prompt.
-- Do not call a chat-completions endpoint for Jev. Use `POST /api/alpha/decisions`.
-- Do not use the moving `~typesafe/jev-latest` alias for the first prototype.
-- Do not invent clothes or modify the canonical catalog based on model output.
-- Do not persist, log, prefill, or commit API keys.
-- Do not pretend browser-only secrets are safe for public deployment. Preserve the rule-only fallback.
-- Keep error text user-friendly, while leaving diagnostic details only in test assertions/developer exceptions after redacting secrets.
+- Do not replace the local rules engine with an AI service.
+- Do not invent clothes or modify the canonical catalog outside `src/data/outfits.js`.
+- Keep error text user-friendly, while leaving diagnostic details only in test assertions/developer exceptions.
 
 ---
 
-## 13. Source notes (verified 25 September 2026)
+## 12. Source notes (verified 25 September 2026)
 
 - [Open-Meteo Forecast API documentation](https://open-meteo.com/en/docs) — hourly/current/daily variables, timezone handling, model selection, WMO weather codes, and forecast endpoint behavior.
 - [Open-Meteo DWD ICON API documentation](https://open-meteo.com/en/docs/dwd-api) — ICON-D2 Central Europe coverage, roughly 2 km spatial resolution, 15-minute data, and three-hour update cadence.
 - [Open-Meteo pricing and licence information](https://open-meteo.com/en/pricing) — free/open-access prototype use, non-commercial limits, and attribution requirement.
 - [meteoblue Weather API overview](https://docs.meteoblue.com/en/weather-apis/introduction/overview) and [product page](https://business.meteoblue.com/products/weather-apis) — alternative forecast API, trial/key requirement, and frontend key-protection features.
-- [OpenRouter Jev tutorial](https://openrouter.ai/docs/guides/community/jev-tutorial) — Decisions API endpoint, `choice`/`noul`/`score` question types, typed response, and key warning.
-- [OpenRouter Jev 1.13 model page](https://openrouter.ai/typesafe/jev-1.13) — pinned model ID, decision-only behavior, context, endpoint, and current published price.
-- [OpenRouter API authentication guidance](https://openrouter.ai/docs/api_reference/authentication) — bearer authentication, per-key credit limits, and key-exposure guidance.

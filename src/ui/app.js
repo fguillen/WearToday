@@ -1,28 +1,20 @@
 import { copy, formatters } from '../copy.js';
 import { OUTFITS, getOutfitById } from '../data/outfits.js';
 import { currentConditions, getWeatherMeta, selectWindowHours } from '../domain/forecast.js';
-import { DEFAULTS, addOnsForOutfit, deriveDaySummary, recommendOutfit } from '../domain/recommendation.js';
-import { validateAiDecision } from '../domain/validators.js';
-import { requestJevDecision } from '../services/jev-service.js';
-import { clearOpenRouterKey, getOpenRouterKey, setOpenRouterKey } from '../services/session-key.js';
+import { DEFAULTS, deriveDaySummary, recommendOutfit } from '../domain/recommendation.js';
 import { loadBerlinForecast, readCachedForecast } from '../services/weather-service.js';
 import { drawHourlyChart, renderHourlyTable } from './hourly-chart.js';
 import { escapeHtml } from './html.js';
-import { createKeyDialog, renderKeyDialogMarkup } from './key-dialog.js';
-import { renderRecommendationCard, sourceText } from './recommendation-card.js';
+import { renderRecommendationCard } from './recommendation-card.js';
 import { renderStatusBanner, renderWeatherError } from './status-banner.js';
 
-const AI_IDLE = Object.freeze({ status: 'not-requested', decision: null, error: null });
 const CHART_MARGIN_HOURS = 1;
 
 export function createInitialState() {
   return {
     weather: { status: 'idle', data: null, error: null, isStale: false },
     daySummary: null,
-    rulesRecommendation: null,
     recommendation: { source: 'rules', outfitId: null, addOns: [], reasons: [] },
-    ai: AI_IDLE,
-    keyDialogOpen: false,
     chartAvailable: true
   };
 }
@@ -47,8 +39,7 @@ function renderShell() {
       </section>
     </main>
     <footer class="site-footer"><p>${escapeHtml(copy.footer)}</p></footer>
-    <div id="announcer" class="visually-hidden" aria-live="polite"></div>
-    ${renderKeyDialogMarkup()}`;
+    <div id="announcer" class="visually-hidden" aria-live="polite"></div>`;
 }
 
 function renderSnapshot(weather) {
@@ -114,15 +105,12 @@ function chartHours(forecast) {
 
 export function createApp(root, deps = {}) {
   const weatherService = deps.weatherService ?? { load: loadBerlinForecast, readCache: readCachedForecast };
-  const jevService = deps.jevService ?? { requestDecision: requestJevDecision };
-  const keyStore = deps.keyStore ?? { get: getOpenRouterKey, set: setOpenRouterKey, clear: clearOpenRouterKey };
   const drawChart = deps.drawChart ?? drawHourlyChart;
   const doc = root.ownerDocument;
   const win = doc.defaultView;
 
   let state = createInitialState();
   let weatherController = null;
-  let aiToken = 0;
   let renderedForecastData = null;
   let focusMemoId = null;
   let resizeFrame = 0;
@@ -138,20 +126,6 @@ export function createApp(root, deps = {}) {
     forecast: root.querySelector('#forecast'),
     announcer: root.querySelector('#announcer')
   };
-
-  const hasKey = () => Boolean(keyStore.get());
-  const keyDialog = createKeyDialog(root.querySelector('#key-dialog'), {
-    hasKey,
-    onSubmit(value) {
-      keyStore.set(value);
-      setState({ keyDialogOpen: false });
-      // Only ask Jev once a valid weather summary exists.
-      if (state.daySummary) runAiDecision();
-    },
-    onSkip: () => setState({ keyDialogOpen: false }),
-    onForget: forgetKey,
-    onCancel: () => setState({ keyDialogOpen: false })
-  });
 
   function setState(patch) {
     state = { ...state, ...patch };
@@ -191,9 +165,7 @@ export function createApp(root, deps = {}) {
       el.outfit.innerHTML = renderRecommendationCard({
         outfit: state.recommendation.outfitId ? getOutfitById(state.recommendation.outfitId) : null,
         recommendation: state.recommendation,
-        ai: state.ai,
         daySummary: state.daySummary,
-        hasKey: hasKey(),
         weatherStatus: weather.status
       });
       const details = el.outfit.querySelector('#decision-details');
@@ -235,14 +207,10 @@ export function createApp(root, deps = {}) {
       setState({ weather: { ...state.weather, status: 'error', error: copy.weatherError } });
       return false;
     }
-    const rules = recommendOutfit(daySummary, DEFAULTS, OUTFITS);
-    aiToken += 1; // Any in-flight AI answer refers to the old forecast.
     setState({
       weather: { status, data, error: null, isStale },
       daySummary,
-      rulesRecommendation: rules,
-      recommendation: rules,
-      ai: AI_IDLE
+      recommendation: recommendOutfit(daySummary, DEFAULTS, OUTFITS)
     });
     return true;
   }
@@ -272,75 +240,10 @@ export function createApp(root, deps = {}) {
     }
   }
 
-  async function runAiDecision() {
-    const apiKey = keyStore.get();
-    if (!apiKey) return openKeyDialog();
-    if (!state.daySummary || state.ai.status === 'loading') return;
-
-    const token = ++aiToken;
-    const { daySummary, rulesRecommendation } = state;
-    setState({ ai: { status: 'loading', decision: null, error: null }, recommendation: rulesRecommendation });
-
-    let decision;
-    try {
-      decision = await jevService.requestDecision({ apiKey, daySummary, outfits: OUTFITS });
-    } catch {
-      if (token !== aiToken) return;
-      setState({ ai: { status: 'error', decision: null, error: copy.aiFailed } });
-      announce(copy.aiFailed);
-      return;
-    }
-    if (token !== aiToken) return;
-
-    const verdict = validateAiDecision({ decision, daySummary, outfits: OUTFITS, defaults: DEFAULTS });
-    if (!verdict.accepted) {
-      setState({ ai: { status: 'rejected', decision: { ...decision, accepted: false, rejectionReason: verdict.reason }, error: null } });
-    } else {
-      const outfit = getOutfitById(decision.outfitId);
-      setState({
-        ai: { status: 'accepted', decision: { ...decision, accepted: true }, error: null },
-        recommendation: {
-          source: 'ai',
-          outfitId: outfit.id,
-          addOns: addOnsForOutfit(outfit, daySummary),
-          reasons: rulesRecommendation.reasons
-        }
-      });
-    }
-    const label = getOutfitById(state.recommendation.outfitId).label;
-    announce(copy.announceRecommendation(label, sourceText(state.recommendation, state.ai)));
-  }
-
-  function openKeyDialog(trigger) {
-    setState({ keyDialogOpen: true });
-    keyDialog.open(trigger ?? doc.getElementById('ai-button'));
-  }
-
-  function forgetKey() {
-    keyStore.clear();
-    aiToken += 1;
-    setState({ keyDialogOpen: false, ai: AI_IDLE, recommendation: state.rulesRecommendation ?? state.recommendation });
-    announce(copy.keyForgotten);
-  }
-
   function onClick(event) {
     const button = event.target.closest('[data-action]');
     if (!button || button.disabled) return;
-    switch (button.dataset.action) {
-      case 'refresh':
-        loadWeather({ force: true });
-        break;
-      case 'use-ai':
-        if (hasKey()) runAiDecision();
-        else openKeyDialog(button);
-        break;
-      case 'change-key':
-        openKeyDialog(button);
-        break;
-      case 'forget-key':
-        forgetKey();
-        break;
-    }
+    if (button.dataset.action === 'refresh') loadWeather({ force: true });
   }
 
   function onResize() {

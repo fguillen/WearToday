@@ -142,17 +142,6 @@ export function jsonResponse(body, { status = 200 } = {}) {
   };
 }
 
-export function jevResponse({ choice = 'cold-rain', confidence = 0.82, noul = 0.97, score = 2.89, type = 'choice' } = {}) {
-  return {
-    answers: {
-      recommended_outfit: { type, choice, confidence, probabilities: { [choice]: confidence } },
-      rain_gear_required: { type: 'noul', noul },
-      warmth_level: { type: 'score', score, confidence: 0.95 }
-    },
-    usage: { input_tokens: 0, output_tokens: 0, cost: 0 }
-  };
-}
-
 // Dev-only weather service: `?fixture=cold-rain`, or `?fixture=offline` to
 // exercise the error state.
 export function createFixtureWeatherService(name) {
