@@ -4,8 +4,8 @@ import { escapeHtml } from './html.js';
 
 // Canvas 2D chart plus an accessible table built from the same hours.
 
-const PADDING = { top: 34, right: 40, bottom: 28, left: 38 };
-const GLYPH_EVERY_HOURS = 3;
+const PADDING = { top: 34, right: 40, bottom: 48, left: 38 };
+const GLYPH_WIDTH_PX = 26;
 
 export function computeTemperatureScale(values) {
   const finite = values.filter(Number.isFinite);
@@ -32,7 +32,10 @@ function readColors(element) {
     temperature: token('--warm', '#F97316'),
     rain: token('--rain', '#4F7FE6'),
     sun: token('--sun', '#FBBF24'),
-    band: 'rgba(46, 139, 115, 0.08)'
+    now: token('--leaf-strong', '#1F6F5C'),
+    nowBand: 'rgba(46, 139, 115, 0.16)',
+    pastBand: 'rgba(100, 116, 139, 0.10)',
+    card: token('--card', '#FFFFFF')
   };
 }
 
@@ -80,7 +83,18 @@ function drawGlyph(ctx, icon, x, y, colors) {
   }
 }
 
-export function drawHourlyChart(canvas, hours, { windowStart = 8, windowEnd = 17 } = {}) {
+function roundedRect(ctx, x, y, width, height, radius) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + width, y, x + width, y + height, radius);
+  ctx.arcTo(x + width, y + height, x, y + height, radius);
+  ctx.arcTo(x, y + height, x, y, radius);
+  ctx.arcTo(x, y, x + width, y, radius);
+  ctx.closePath();
+}
+
+// `currentIndex` is the position of the current hour in `hours` (-1: not today).
+export function drawHourlyChart(canvas, hours, { currentIndex = -1 } = {}) {
   const ctx = canvas?.getContext?.('2d');
   if (!ctx || hours.length === 0) return false;
 
@@ -109,12 +123,14 @@ export function drawHourlyChart(canvas, hours, { windowStart = 8, windowEnd = 17
   ctx.font = '12px system-ui, -apple-system, "Segoe UI", sans-serif';
   ctx.textBaseline = 'middle';
 
-  // Kindergarten window band.
-  const inWindow = hours.map((hour, index) => (hour.hour >= windowStart && hour.hour <= windowEnd ? index : -1)).filter((i) => i >= 0);
-  if (inWindow.length) {
-    ctx.fillStyle = colors.band;
-    const bandLeft = plot.left + slot * inWindow[0];
-    ctx.fillRect(bandLeft, plot.top, slot * inWindow.length, plot.bottom - plot.top);
+  // Past hours in grey, the current hour as a full-height green column.
+  if (currentIndex > 0) {
+    ctx.fillStyle = colors.pastBand;
+    ctx.fillRect(plot.left, 0, slot * currentIndex, plot.bottom);
+  }
+  if (currentIndex >= 0) {
+    ctx.fillStyle = colors.nowBand;
+    ctx.fillRect(plot.left + slot * currentIndex, 0, slot, plot.bottom);
   }
 
   // Grid + left axis (temperature).
@@ -170,29 +186,62 @@ export function drawHourlyChart(canvas, hours, { windowStart = 8, windowEnd = 17
     ctx.fill();
   });
 
-  // X labels + weather glyphs.
+  // Current hour: a larger ringed dot on the line.
+  const nowTemp = temps[currentIndex];
+  if (Number.isFinite(nowTemp)) {
+    ctx.fillStyle = colors.card;
+    ctx.beginPath();
+    ctx.arc(xCenter(currentIndex), yTemp(nowTemp), 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = colors.now;
+    ctx.beginPath();
+    ctx.arc(xCenter(currentIndex), yTemp(nowTemp), 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // X labels + weather glyphs, thinned out on narrow screens. The current
+  // hour always gets both; skipped neighbours keep the labels from colliding.
   const labelEvery = slot < 34 ? 2 : 1;
+  const glyphEvery = Math.ceil(GLYPH_WIDTH_PX / slot);
+  const near = (index, every) => currentIndex >= 0 && index !== currentIndex && Math.abs(index - currentIndex) < every;
   ctx.textAlign = 'center';
   hours.forEach((hour, index) => {
-    if (index % labelEvery === 0) {
-      ctx.fillStyle = colors.muted;
+    const isNow = index === currentIndex;
+    if (isNow || (index % labelEvery === 0 && !near(index, labelEvery))) {
+      ctx.fillStyle = isNow ? colors.ink : colors.muted;
+      ctx.font = `${isNow ? '700 ' : ''}12px system-ui, -apple-system, "Segoe UI", sans-serif`;
       ctx.fillText(formatters.hourLabel(hour.hour).slice(0, 2), xCenter(index), plot.bottom + 14);
     }
-    if (index % GLYPH_EVERY_HOURS === 0) {
+    if (isNow || (index % glyphEvery === 0 && !near(index, glyphEvery))) {
       drawGlyph(ctx, getWeatherMeta(hour.weatherCode).icon, xCenter(index), 14, colors);
     }
   });
 
+  // "Now" pill under the current hour's label.
+  if (currentIndex >= 0) {
+    ctx.font = '700 11px system-ui, -apple-system, "Segoe UI", sans-serif';
+    const label = copy.nowMarker;
+    const pillWidth = ctx.measureText(label).width + 14;
+    const pillLeft = Math.min(Math.max(xCenter(currentIndex) - pillWidth / 2, 0), width - pillWidth);
+    ctx.fillStyle = colors.now;
+    roundedRect(ctx, pillLeft, plot.bottom + 24, pillWidth, 18, 9);
+    ctx.fill();
+    ctx.fillStyle = colors.card;
+    ctx.fillText(label, pillLeft + pillWidth / 2, plot.bottom + 33);
+  }
+
   return true;
 }
 
-export function renderHourlyTable(hours) {
+export function renderHourlyTable(hours, { currentIndex = -1 } = {}) {
   const [time, feels, rain, condition, wind] = copy.tableColumns;
   const rows = hours
-    .map((hour) => {
+    .map((hour, index) => {
       const feelsValue = feelsLike(hour);
-      return `<tr>
-        <th scope="row">${escapeHtml(formatters.localHourLabel(hour.time))}</th>
+      const isNow = index === currentIndex;
+      const rowAttrs = isNow ? ' class="is-now" aria-current="time"' : currentIndex > index ? ' class="is-past"' : '';
+      return `<tr${rowAttrs}>
+        <th scope="row">${escapeHtml(formatters.localHourLabel(hour.time))}${isNow ? ` <span class="now-tag">${escapeHtml(copy.nowMarker)}</span>` : ''}</th>
         <td>${Number.isFinite(feelsValue) ? `${Math.round(feelsValue)}°C` : '–'}</td>
         <td>${hour.precipitationProbabilityPercent ?? '–'}${hour.precipitationProbabilityPercent !== null ? '%' : ''}</td>
         <td>${escapeHtml(getWeatherMeta(hour.weatherCode).label)}</td>
@@ -204,7 +253,7 @@ export function renderHourlyTable(hours) {
   return `
     <div class="table-scroll">
       <table class="hourly-table">
-        <caption>${escapeHtml(copy.tableCaption)}</caption>
+        <caption>${hours.length ? escapeHtml(copy.tableCaption(formatters.localHourLabel(hours[0].time), formatters.localHourLabel(hours.at(-1).time))) : ''}</caption>
         <thead><tr>
           <th scope="col">${time}</th><th scope="col">${feels}</th><th scope="col">${rain}</th>
           <th scope="col">${condition}</th><th scope="col">${wind}</th>

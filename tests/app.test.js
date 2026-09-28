@@ -6,11 +6,11 @@ import { normalizedScenario } from './fixtures.js';
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-function setup({ scenario = 'cold-rain', load, readCache = () => null, drawChart = vi.fn(() => true) } = {}) {
+function setup({ scenario = 'cold-rain', load, readCache = () => null, drawChart = vi.fn(() => true), now } = {}) {
   const root = document.createElement('div');
   document.body.append(root);
   const weatherService = { load: load ?? vi.fn(async () => normalizedScenario(scenario)), readCache };
-  const app = createApp(root, { weatherService, drawChart });
+  const app = createApp(root, { weatherService, drawChart, now });
   const $ = (selector) => root.querySelector(selector);
   return { root, app, $, weatherService, drawChart };
 }
@@ -36,10 +36,11 @@ describe('app', () => {
     expect(garments).toHaveLength(10);
     expect(garments).toContain('Waterproof shoes (water shoes)');
     expect(root.querySelectorAll('.chips .chip')).toHaveLength(3);
-    expect($('.chips').textContent).toContain('Rain likely after lunch');
-    // 07:00–18:00: the window plus one hour either side, same data as the chart.
-    expect(root.querySelectorAll('.hourly-table tbody tr')).toHaveLength(12);
-    expect(drawChart.mock.calls[0][1]).toHaveLength(12);
+    expect($('.chips').textContent).toContain('Rain likely in the afternoon');
+    // 07:00–22:00: the whole tracked day, same data as the chart.
+    expect(root.querySelectorAll('.hourly-table tbody tr')).toHaveLength(16);
+    expect(drawChart.mock.calls[0][1]).toHaveLength(16);
+    expect($('.snapshot').textContent).not.toMatch(/kindergarten/i);
     expect($('svg[role="img"]').getAttribute('aria-label')).toMatch(/^Illustration: Cold & rainy outfit/);
     expect(root.querySelectorAll('svg [data-layer]').length).toBe(11);
     expect($('#main').getAttribute('aria-busy')).toBe('false');
@@ -101,7 +102,53 @@ describe('app', () => {
     expect($('#chart-wrap').hidden).toBe(true);
     expect($('#chart-unavailable').hidden).toBe(false);
     expect($('#hourly-table-details').open).toBe(true);
-    expect(root.querySelectorAll('.hourly-table tbody tr')).toHaveLength(12);
+    expect(root.querySelectorAll('.hourly-table tbody tr')).toHaveLength(16);
+  });
+
+  it('marks the current hour and keeps past hours visible', async () => {
+    // 07:30Z is 09:30 in Berlin on the fixture date.
+    const { app, $, root, drawChart } = setup({ now: () => new Date('2026-09-25T07:30:00Z') });
+    await app.start();
+
+    expect(drawChart.mock.calls[0][2]).toEqual({ currentIndex: 2 });
+    const rows = [...root.querySelectorAll('.hourly-table tbody tr')];
+    expect(rows).toHaveLength(16);
+    expect(rows[2].getAttribute('aria-current')).toBe('time');
+    expect(rows[2].textContent).toContain('09:00');
+    expect(rows[2].querySelector('.now-tag').textContent).toBe(copy.nowMarker);
+    expect(rows.slice(0, 2).every((row) => row.classList.contains('is-past'))).toBe(true);
+    expect(rows.slice(3).some((row) => row.classList.contains('is-past'))).toBe(false);
+    expect($('.legend').textContent).toContain(copy.legendNow('09:00'));
+    // The outfit only covers the hours still ahead.
+    expect($('#decision-details').textContent).toContain('Checked 09:00–22:00 (14 hours).');
+    expect($('.snapshot').textContent).toContain('The outfit covers 09:00–22:00.');
+  });
+
+  it('does not mark any hour when the forecast is for another day', async () => {
+    const { app, $, root, drawChart } = setup({ now: () => new Date('2026-09-26T07:30:00Z') });
+    await app.start();
+
+    expect(drawChart.mock.calls[0][2]).toEqual({ currentIndex: -1 });
+    expect(root.querySelector('[aria-current="time"]')).toBeNull();
+    expect($('.legend').textContent).not.toContain(copy.legendPast);
+  });
+
+  it('moves the now marker when the clock enters a new hour', async () => {
+    vi.useFakeTimers();
+    let clock = new Date('2026-09-25T07:59:00Z');
+    const { app, root, drawChart } = setup({
+      now: () => clock,
+      readCache: () => ({ data: normalizedScenario('mild-dry'), isFresh: true })
+    });
+    await app.start();
+    expect(root.querySelector('[aria-current="time"] th').textContent).toMatch(/^09:00/);
+
+    clock = new Date('2026-09-25T08:01:00Z');
+    vi.advanceTimersByTime(60_000);
+    expect(root.querySelector('[aria-current="time"] th').textContent).toMatch(/^10:00/);
+    expect(drawChart.mock.lastCall[2]).toEqual({ currentIndex: 3 });
+    expect(app.getState().daySummary.window.start).toBe('10:00');
+    app.destroy();
   });
 
   it('uses the real canvas renderer safely when no 2D context exists', async () => {

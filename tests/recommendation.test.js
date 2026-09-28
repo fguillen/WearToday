@@ -27,21 +27,41 @@ describe('outfit catalog', () => {
 });
 
 describe('deriveDaySummary', () => {
-  it('summarizes the kindergarten window only', () => {
+  it('summarizes the whole tracked day, 07:00–22:00', () => {
     const { summary } = recommendFor('cold-rain');
-    expect(summary.window).toEqual({ start: '08:00', end: '17:00', hourCount: 10 });
-    expect(summary.minApparentC).toBe(7.4);
-    expect(summary.maxApparentC).toBe(11.9);
+    expect(summary.window).toEqual({ start: '07:00', end: '22:00', hourCount: 16 });
+    expect(summary.minApparentC).toBe(6.9);
+    expect(summary.maxApparentC).toBe(14.4);
     expect(summary.rainLikely).toBe(true);
     expect(summary.maxRainProbability).toBe(70);
-    expect(summary.precipitationTotalMm).toBe(2);
+    expect(summary.precipitationTotalMm).toBe(4.5);
     expect(summary.firstRainHour).toBe(14);
     expect(summary.maxWindKmh).toBe(22);
     expect(summary.sunnyFraction).toBe(0);
   });
 
-  it('ignores cold nights and night-time rain outside the window', () => {
-    expect(recommendFor('cold-dry').summary.minApparentC).toBe(3);
+  it('only looks at the hours from `fromHour` to the end of the day', () => {
+    const summary = deriveDaySummary(normalizedScenario('cold-rain'), DEFAULTS, { fromHour: 15 });
+    expect(summary.window).toEqual({ start: '15:00', end: '22:00', hourCount: 8 });
+    expect(summary.minApparentC).toBe(10.9);
+    expect(summary.precipitationTotalMm).toBe(4);
+    expect(summary.firstRainHour).toBe(15);
+  });
+
+  it('clamps `fromHour` into the tracked day', () => {
+    const forecast = normalizedScenario('cold-rain');
+    expect(deriveDaySummary(forecast, DEFAULTS, { fromHour: 3 }).window.start).toBe('07:00');
+    expect(deriveDaySummary(forecast, DEFAULTS, { fromHour: 23 }).window).toEqual({ start: '22:00', end: '22:00', hourCount: 1 });
+  });
+
+  it('drops the cold morning from the outfit once it has passed', () => {
+    const later = deriveDaySummary(normalizedScenario('cold-dry'), DEFAULTS, { fromHour: 20 });
+    expect(later.minApparentC).toBe(9);
+    expect(recommendOutfit(later, DEFAULTS).outfitId).toBe('fresh-dry');
+  });
+
+  it('ignores cold nights and late-night rain outside the tracked day', () => {
+    expect(recommendFor('cold-dry').summary.minApparentC).toBe(2.5);
     const hot = recommendFor('sunny-hot').summary;
     expect(hot.rainLikely).toBe(false);
     expect(hot.hotAndSunny).toBe(true);
@@ -60,15 +80,16 @@ describe('deriveDaySummary', () => {
   it('produces short human reasons', () => {
     const { summary } = recommendFor('cold-rain');
     expect(summary.reasons).toEqual([
-      'Rain likely after lunch (up to 70%)',
-      'Feels like 7°C at drop-off',
+      'Rain likely in the afternoon (up to 70%)',
+      'Feels like 7°C early in the morning',
+      'Warming to 14°C later',
       'Breezy — up to 22 km/h'
     ]);
   });
 
-  it('throws when the window has no usable temperatures', () => {
+  it('throws when the tracked day has no usable temperatures', () => {
     const forecast = normalizeForecast(
-      buildRawForecast({ perHour: (hour) => (hour >= 8 && hour <= 17 ? { apparent: null, temperature: null } : {}) })
+      buildRawForecast({ perHour: (hour) => (hour >= 7 && hour <= 22 ? { apparent: null, temperature: null } : {}) })
     );
     expect(() => deriveDaySummary(forecast)).toThrow(InsufficientForecastError);
   });

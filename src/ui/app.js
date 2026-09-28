@@ -1,6 +1,6 @@
 import { copy, formatters } from '../copy.js';
 import { OUTFITS, getOutfitById } from '../data/outfits.js';
-import { currentConditions, getWeatherMeta, selectWindowHours } from '../domain/forecast.js';
+import { currentConditions, currentHourIndex, getWeatherMeta, localDateHour, selectWindowHours } from '../domain/forecast.js';
 import { DEFAULTS, deriveDaySummary, recommendOutfit } from '../domain/recommendation.js';
 import { loadBerlinForecast, readCachedForecast } from '../services/weather-service.js';
 import { drawHourlyChart, renderHourlyTable } from './hourly-chart.js';
@@ -8,7 +8,8 @@ import { escapeHtml } from './html.js';
 import { renderRecommendationCard } from './recommendation-card.js';
 import { renderStatusBanner, renderWeatherError } from './status-banner.js';
 
-const CHART_MARGIN_HOURS = 1;
+// How often to check whether the clock moved into a new hour.
+const CLOCK_TICK_MS = 60_000;
 
 export function createInitialState() {
   return {
@@ -42,7 +43,7 @@ function renderShell() {
     <div id="announcer" class="visually-hidden" aria-live="polite"></div>`;
 }
 
-function renderSnapshot(weather) {
+function renderSnapshot(weather, daySummary) {
   if (weather.data) {
     const now = currentConditions(weather.data);
     return `
@@ -55,7 +56,11 @@ function renderSnapshot(weather) {
         })
       )}</p>
       <p class="muted">${escapeHtml(
-        copy.windowNote(formatters.hourLabel(DEFAULTS.kindergartenStartHour), formatters.hourLabel(DEFAULTS.kindergartenEndHour))
+        copy.windowNote(
+          formatters.hourLabel(DEFAULTS.dayStartHour),
+          formatters.hourLabel(DEFAULTS.dayEndHour),
+          daySummary?.window.start ?? formatters.hourLabel(DEFAULTS.dayStartHour)
+        )
       )}</p>`;
   }
   if (weather.status === 'error') return renderWeatherError(weather);
@@ -66,15 +71,18 @@ function renderSnapshot(weather) {
     <div class="skeleton skeleton-line short" aria-hidden="true"></div>`;
 }
 
-function renderForecastSection(weather) {
+function renderForecastSection(weather, currentIndex) {
   const heading = `<h2 id="forecast-heading">${escapeHtml(copy.forecastHeading)}</h2>`;
   if (!weather.data) {
     return weather.status === 'error'
       ? heading
       : `${heading}<div class="skeleton skeleton-chart" aria-hidden="true"></div>`;
   }
-  const start = formatters.hourLabel(DEFAULTS.kindergartenStartHour);
-  const end = formatters.hourLabel(DEFAULTS.kindergartenEndHour);
+  const hours = dayHours(weather.data);
+  const nowLegend = currentIndex >= 0
+    ? `<li><span class="swatch swatch-past" aria-hidden="true"></span>${escapeHtml(copy.legendPast)}</li>
+      <li><span class="swatch swatch-now" aria-hidden="true"></span>${escapeHtml(copy.legendNow(formatters.localHourLabel(hours[currentIndex].time)))}</li>`
+    : '';
   return `
     ${heading}
     <h3 id="chart-title" class="chart-title">${escapeHtml(copy.chartTitle)}</h3>
@@ -85,33 +93,32 @@ function renderForecastSection(weather) {
     <ul class="legend">
       <li><span class="swatch swatch-line" aria-hidden="true"></span>${escapeHtml(copy.legendTemperature)}</li>
       <li><span class="swatch swatch-bar" aria-hidden="true"></span>${escapeHtml(copy.legendRain)}</li>
-      <li><span class="swatch swatch-band" aria-hidden="true"></span>${escapeHtml(copy.legendWindow(start, end))}</li>
+      ${nowLegend}
     </ul>
     <p class="chart-unavailable muted" id="chart-unavailable" hidden>${escapeHtml(copy.chartUnavailable)}</p>
     <details class="table-details" id="hourly-table-details">
       <summary>${escapeHtml(copy.tableSummary)}</summary>
-      ${renderHourlyTable(chartHours(weather.data))}
+      ${renderHourlyTable(hours, { currentIndex })}
     </details>`;
 }
 
-// The kindergarten window plus one hour of visual margin on each side.
-function chartHours(forecast) {
-  return selectWindowHours(
-    forecast.hours,
-    DEFAULTS.kindergartenStartHour - CHART_MARGIN_HOURS,
-    DEFAULTS.kindergartenEndHour + CHART_MARGIN_HOURS
-  );
+// The tracked day, past hours included.
+function dayHours(forecast) {
+  return selectWindowHours(forecast.hours, DEFAULTS.dayStartHour, DEFAULTS.dayEndHour);
 }
 
 export function createApp(root, deps = {}) {
   const weatherService = deps.weatherService ?? { load: loadBerlinForecast, readCache: readCachedForecast };
   const drawChart = deps.drawChart ?? drawHourlyChart;
+  const now = deps.now ?? (() => new Date());
   const doc = root.ownerDocument;
   const win = doc.defaultView;
 
   let state = createInitialState();
   let weatherController = null;
   let renderedForecastData = null;
+  let renderedCurrentIndex = -1;
+  let clockTimer = 0;
   let focusMemoId = null;
   let resizeFrame = 0;
 
@@ -149,6 +156,17 @@ export function createApp(root, deps = {}) {
     }
   }
 
+  function currentIndex() {
+    return state.weather.data ? currentHourIndex(dayHours(state.weather.data), now(), DEFAULTS.timezone) : -1;
+  }
+
+  // The outfit looks at the hours from now to the end of the day; a forecast
+  // for another day falls back to the whole day.
+  function outfitFromHour(forecast) {
+    const clock = localDateHour(now(), DEFAULTS.timezone);
+    return clock.date === forecast.day.date ? clock.hour : DEFAULTS.dayStartHour;
+  }
+
   function render() {
     const { weather } = state;
     el.headerMeta.textContent = weather.data
@@ -159,7 +177,7 @@ export function createApp(root, deps = {}) {
 
     preservingFocus(() => {
       el.banner.innerHTML = renderStatusBanner(weather);
-      el.snapshot.innerHTML = renderSnapshot(weather);
+      el.snapshot.innerHTML = renderSnapshot(weather, state.daySummary);
 
       const detailsOpen = el.outfit.querySelector('#decision-details')?.open ?? false;
       el.outfit.innerHTML = renderRecommendationCard({
@@ -171,10 +189,12 @@ export function createApp(root, deps = {}) {
       const details = el.outfit.querySelector('#decision-details');
       if (details) details.open = detailsOpen;
 
-      // The chart only changes with new forecast data.
-      if (weather.data !== renderedForecastData || !weather.data) {
-        el.forecast.innerHTML = renderForecastSection(weather);
+      // The chart only changes with new forecast data or a new hour.
+      const nowIndex = currentIndex();
+      if (weather.data !== renderedForecastData || nowIndex !== renderedCurrentIndex || !weather.data) {
+        el.forecast.innerHTML = renderForecastSection(weather, nowIndex);
         renderedForecastData = weather.data;
+        renderedCurrentIndex = nowIndex;
         if (weather.data) paintChart();
       }
     });
@@ -185,10 +205,7 @@ export function createApp(root, deps = {}) {
     if (!canvas || !state.weather.data) return;
     let drawn = false;
     try {
-      drawn = drawChart(canvas, chartHours(state.weather.data), {
-        windowStart: DEFAULTS.kindergartenStartHour,
-        windowEnd: DEFAULTS.kindergartenEndHour
-      });
+      drawn = drawChart(canvas, dayHours(state.weather.data), { currentIndex: renderedCurrentIndex });
     } catch {
       drawn = false;
     }
@@ -199,19 +216,20 @@ export function createApp(root, deps = {}) {
     if (!drawn) el.forecast.querySelector('#hourly-table-details').open = true;
   }
 
+  function summarize(data) {
+    const daySummary = deriveDaySummary(data, DEFAULTS, { fromHour: outfitFromHour(data) });
+    return { daySummary, recommendation: recommendOutfit(daySummary, DEFAULTS, OUTFITS) };
+  }
+
   function applyForecast(data, { status = 'ready', isStale = false } = {}) {
-    let daySummary;
+    let outfit;
     try {
-      daySummary = deriveDaySummary(data, DEFAULTS);
+      outfit = summarize(data);
     } catch {
       setState({ weather: { ...state.weather, status: 'error', error: copy.weatherError } });
       return false;
     }
-    setState({
-      weather: { status, data, error: null, isStale },
-      daySummary,
-      recommendation: recommendOutfit(daySummary, DEFAULTS, OUTFITS)
-    });
+    setState({ weather: { status, data, error: null, isStale }, ...outfit });
     return true;
   }
 
@@ -252,12 +270,24 @@ export function createApp(root, deps = {}) {
     resizeFrame = (win.requestAnimationFrame ?? ((fn) => setTimeout(fn, 16)))(() => paintChart());
   }
 
+  // A new hour moves the chart marker and drops that hour from the outfit.
+  function onClockTick() {
+    const { weather } = state;
+    if (!weather.data || currentIndex() === renderedCurrentIndex) return;
+    try {
+      setState(summarize(weather.data));
+    } catch {
+      setState({ weather: { ...weather, status: 'error', error: copy.weatherError } });
+    }
+  }
+
   root.addEventListener('click', onClick);
   win.addEventListener('resize', onResize);
 
   return {
     start() {
       render();
+      clockTimer = setInterval(onClockTick, CLOCK_TICK_MS);
       const cached = weatherService.readCache?.();
       if (cached?.data) {
         applyForecast(cached.data, { status: cached.isFresh ? 'ready' : 'loading', isStale: !cached.isFresh });
@@ -269,6 +299,7 @@ export function createApp(root, deps = {}) {
     getState: () => state,
     destroy() {
       weatherController?.abort();
+      clearInterval(clockTimer);
       root.removeEventListener('click', onClick);
       win.removeEventListener('resize', onResize);
     }

@@ -6,8 +6,8 @@ import { feelsLike, selectWindowHours } from './forecast.js';
 // should let parents adjust them.
 export const DEFAULTS = Object.freeze({
   timezone: 'Europe/Berlin',
-  kindergartenStartHour: 8,
-  kindergartenEndHour: 17,
+  dayStartHour: 7,
+  dayEndHour: 22,
   hotMinimumApparentC: 22,
   mildMinimumApparentC: 16,
   freshMinimumApparentC: 9,
@@ -25,16 +25,19 @@ const WARMING_SPREAD_C = 6;
 
 export class InsufficientForecastError extends Error {
   constructor() {
-    super('No usable forecast hours in the kindergarten window');
+    super('No usable forecast hours between the day start and end');
     this.name = 'InsufficientForecastError';
   }
 }
 
 const round1 = (value) => Math.round(value * 10) / 10;
 
-export function deriveDaySummary(forecast, defaults = DEFAULTS) {
-  const start = defaults.kindergartenStartHour;
-  const end = defaults.kindergartenEndHour;
+// Only the hours still ahead matter for what to wear: `fromHour` (usually the
+// current hour) is clamped into the tracked day, so before 07:00 the whole day
+// counts and after 22:00 only the last hour does.
+export function deriveDaySummary(forecast, defaults = DEFAULTS, { fromHour = defaults.dayStartHour } = {}) {
+  const end = defaults.dayEndHour;
+  const start = Math.min(Math.max(fromHour, defaults.dayStartHour), end);
   const windowHours = selectWindowHours(forecast.hours, start, end).filter((hour) => feelsLike(hour) !== null);
   if (windowHours.length === 0) throw new InsufficientForecastError();
 
@@ -91,7 +94,7 @@ function buildReasons(summary, defaults) {
   if (summary.rainLikely) {
     reasons.push(
       summary.maxRainProbability >= defaults.rainProbabilityThreshold
-        ? copy.reasonRainLikely(copy.timeOfDay(summary.firstRainHour ?? defaults.kindergartenStartHour), summary.maxRainProbability)
+        ? copy.reasonRainLikely(copy.timeOfDay(summary.firstRainHour ?? defaults.dayStartHour), summary.maxRainProbability)
         : copy.reasonRainAmount(summary.precipitationTotalMm)
     );
   }

@@ -8,6 +8,7 @@
   --sky: #60A5FA;
   --rain: #4F7FE6;
   --leaf: #2E8B73;
+  --leaf-strong: #1F6F5C;
   --warm: #F97316;
   --danger: #B42318;
   --focus: #1D4ED8;
@@ -331,9 +332,14 @@ details summary {
   background: rgb(79 127 230 / 0.35);
 }
 
-.swatch-band {
+.swatch-past {
   border: 1px solid var(--line);
-  background: rgb(46 139 115 / 0.12);
+  background: rgb(100 116 139 / 0.10);
+}
+
+.swatch-now {
+  background: rgb(46 139 115 / 0.35);
+  box-shadow: inset 0 0 0 1px var(--leaf);
 }
 
 .table-scroll {
@@ -358,6 +364,25 @@ details summary {
   border-bottom: 1px solid var(--line);
   text-align: left;
   white-space: nowrap;
+}
+
+.hourly-table tr.is-past {
+  color: var(--muted-ink);
+}
+
+.hourly-table tr.is-now {
+  background: rgb(46 139 115 / 0.12);
+  font-weight: 600;
+}
+
+.now-tag {
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--leaf-strong);
+  color: var(--card);
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 
 /* Loading skeletons (static; no animation). */

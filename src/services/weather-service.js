@@ -1,5 +1,5 @@
 import { copy } from '../copy.js';
-import { BERLIN, ForecastShapeError, normalizeForecast } from '../domain/forecast.js';
+import { BERLIN, ForecastShapeError, localDateHour, normalizeForecast } from '../domain/forecast.js';
 import { DEFAULTS } from '../domain/recommendation.js';
 
 export const FORECAST_ENDPOINT = 'https://api.open-meteo.com/v1/forecast';
@@ -138,11 +138,6 @@ function safeStorage(storage) {
   }
 }
 
-function berlinDate(date) {
-  // en-CA formats as YYYY-MM-DD.
-  return new Intl.DateTimeFormat('en-CA', { timeZone: DEFAULTS.timezone }).format(date);
-}
-
 // Returns the cached forecast for today (fresh or not), or null.
 export function readCachedForecast({ storage, now = () => new Date(), maxAgeMinutes = DEFAULTS.cacheMinutes } = {}) {
   const store = safeStorage(storage);
@@ -151,7 +146,7 @@ export function readCachedForecast({ storage, now = () => new Date(), maxAgeMinu
     const cached = JSON.parse(store.getItem(CACHE_KEY) ?? 'null');
     if (!cached?.fetchedAt || !Array.isArray(cached.hours) || !cached.day) return null;
     const current = now();
-    if (cached.day.date !== berlinDate(current)) return null;
+    if (cached.day.date !== localDateHour(current, DEFAULTS.timezone).date) return null;
     const ageMs = current.getTime() - new Date(cached.fetchedAt).getTime();
     return { data: cached, isFresh: ageMs >= 0 && ageMs < maxAgeMinutes * 60_000 };
   } catch {

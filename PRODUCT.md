@@ -15,7 +15,7 @@
 1. a visual illustration of the recommended outfit;
 2. a readable list of garments to put on;
 3. a graphic, hour-by-hour view of today’s weather; and
-4. short, transparent reasons such as “Chilly at drop-off” and “Rain likely after lunch.”
+4. short, transparent reasons such as “Feels like 7°C in the morning” and “Rain likely in the afternoon.”
 
 The app uses local, deterministic weather rules to select from predefined outfits. The recommendation is guidance, never a safety authority or medical advice.
 
@@ -238,8 +238,8 @@ Place thresholds in a small exported constant in `src/domain/recommendation.js`.
 ```js
 export const DEFAULTS = {
   timezone: 'Europe/Berlin',
-  kindergartenStartHour: 8,
-  kindergartenEndHour: 17,
+  dayStartHour: 7,
+  dayEndHour: 22,
   hotMinimumApparentC: 22,
   mildMinimumApparentC: 16,
   freshMinimumApparentC: 9,
@@ -252,15 +252,15 @@ export const DEFAULTS = {
 };
 ```
 
-The time window is deliberate: the user says “whole day,” but the decision should evaluate the typical kindergarten/outdoor window (08:00–17:00), not a cold late night. Show the evaluated window in the interface.
+The app tracks the whole day, 07:00–22:00 local Berlin time, hour by hour. The outfit decision only looks at the hours still ahead: from the current hour to 22:00 (the whole day before 07:00, only 22:00 after it). When the clock enters a new hour, the recommendation is recomputed. Show the evaluated range in the interface.
 
 ### 5.4 Deterministic baseline algorithm
 
-`deriveDaySummary(forecast, DEFAULTS)` should work only on the selected local time window and return a plain object such as:
+`deriveDaySummary(forecast, DEFAULTS, { fromHour })` should work only on the hours from `fromHour` (clamped into 07–22) to 22:00 and return a plain object such as:
 
 ```js
 {
-  window: { start: '08:00', end: '17:00', hourCount: 10 },
+  window: { start: '09:00', end: '22:00', hourCount: 14 },
   minApparentC: 7.4,
   maxApparentC: 13.1,
   rainLikely: true,
@@ -269,7 +269,7 @@ The time window is deliberate: the user says “whole day,” but the decision s
   sunnyFraction: 0.10,
   maxWindKmh: 22,
   reasons: [
-    'Feels as cool as 7°C during kindergarten hours',
+    'Feels like 7°C in the morning',
     'Rain is likely (up to 70%)',
     'Breezy at times (up to 22 km/h)'
   ]
@@ -279,7 +279,7 @@ The time window is deliberate: the user says “whole day,” but the decision s
 Rules, in order:
 
 ```text
-1. Evaluate only 08:00–17:00 local Berlin time.
+1. Evaluate only the current hour to 22:00 local Berlin time (within 07:00–22:00).
 2. rainLikely = any hourly precipitation probability >= 50
                 OR total precipitation in the window >= 0.3 mm.
 3. hotAndSunny = rainLikely is false
@@ -486,7 +486,7 @@ Create a warm, calm, modern interface for a busy parent. It should be playful en
   <section aria-labelledby="today-heading">                 // Weather snapshot
     Today in Berlin · Friday, 25 September
     10°C now · feels like 8°C · Overcast
-    “We check 08:00–17:00 for kindergarten.”
+    “We track the whole day, 07:00–22:00, hour by hour. The outfit covers 09:00–22:00.”
   </section>
 
   <section aria-labelledby="outfit-heading">                // Primary recommendation
@@ -528,8 +528,8 @@ The recommendation card is the visual focal point.
 - Illustration: a neutral, simple child silhouette with layered SVG elements. Each `visualLayer` in the catalog maps to an SVG `<g>` with meaningful `aria-label` text and a distinct garment color/shape.
 - Garment checklist: 1–2 column responsive list. Each line has a simple inline SVG garment marker and text.
 - Reason chips: maximum three, generated from `daySummary.reasons`. Examples:
-  - `Feels like 7°C at drop-off`
-  - `Rain likely after lunch`
+  - `Feels like 7°C in the morning`
+  - `Rain likely in the afternoon`
   - `Breezy — up to 22 km/h`
 - Source line: `Weather rules`.
 - Do not display a child’s age in the card.
@@ -556,19 +556,19 @@ Implementation constraints:
 
 Use a `canvas` only after it has a textual equivalent.
 
-**Chart data:** the local 08:00–17:00 window, plus 07:00 and 18:00 where available as a visual margin. Avoid displaying an entire night when the decision relates to kindergarten hours.
+**Chart data:** every hour from 07:00 to 22:00 local time, including hours that have already passed.
 
 **Render:**
 
 - Primary line: apparent temperature in °C, labeled in the legend.
 - Bars: precipitation probability percent, with a clearly separate right axis or labeled baseline.
-- Tiny weather glyph per 2–3 hour interval from WMO codes.
-- A translucent background band for the 08:00–17:00 assessment period.
+- Tiny weather glyph from WMO codes, every hour when there is room, otherwise every 2–3 hours.
+- The current hour marked clearly: a full-height highlighted column, a larger ringed dot on the line, a bold hour label and a “Now” pill. Past hours get a subtle grey background. The marker moves when the clock enters a new hour.
 - Horizontal grid labels at round temperature values; x-axis labels at readable intervals.
 - A chart title: `Hourly forecast — apparent temperature and rain chance`.
 - On canvas resize, redraw using `devicePixelRatio`; avoid blurry graphics.
 
-**Accessible alternative:** a collapsed `<details>` named “View the hourly forecast as a table” with columns: time, feels like, rain chance, condition, wind. The table is also the fallback if canvas is unavailable.
+**Accessible alternative:** a collapsed `<details>` named “View the hourly forecast as a table” with columns: time, feels like, rain chance, condition, wind. The current hour's row is highlighted with a “Now” tag and `aria-current="time"`; past rows are muted. The table is also the fallback if canvas is unavailable.
 
 ### 7.6 Loading and error states
 
@@ -640,7 +640,7 @@ Use deterministic fixtures, never live APIs, in unit tests.
 
 | Module | Cases |
 | --- | --- |
-| `forecast.js` | Align parallel provider arrays by index; select only 08:00–17:00 Berlin hours; map known and unknown WMO codes; handle missing optional values. |
+| `forecast.js` | Align parallel provider arrays by index; select only 07:00–22:00 Berlin hours; find the current hour; map known and unknown WMO codes; handle missing optional values. |
 | `recommendation.js` | Hot/sunny/dry → `sunny-hot`; mild/dry → `mild-dry`; fresh/dry → `fresh-dry`; cold/dry → `cold-dry`; cold/rainy → `cold-rain`; warm/rainy → dry base with rain-gear add-on. |
 | `weather-service.js` | Correct `URLSearchParams`; normalized success response; API error; malformed payload; 8-second abort; one DWD-to-auto fallback. |
 

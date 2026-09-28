@@ -19,7 +19,7 @@ export const copy = {
   todayHeading: (dateLabel) => `Today in Berlin · ${dateLabel}`,
   nowLine: ({ temperature, feelsLike, condition }) =>
     `${temperature}°C now · feels like ${feelsLike}°C · ${condition}`,
-  windowNote: (start, end) => `We check ${start}–${end} for kindergarten.`,
+  windowNote: (start, end, from) => `We track the whole day, ${start}–${end}, hour by hour. The outfit covers ${from}–${end}.`,
   staleNotice: 'Showing a saved forecast. It may be out of date.',
   weatherErrorTitle: 'Forecast unavailable',
   weatherError: 'Today’s forecast could not load. Check your connection and try again.',
@@ -47,16 +47,16 @@ export const copy = {
   reasonWarmsTo: (temp) => `Warming to ${temp}°C later`,
   reasonRainLikely: (when, percent) => `Rain likely ${when} (up to ${percent}%)`,
   reasonRainAmount: (mm) => `Showers possible (${mm} mm)`,
-  reasonDry: 'Dry during kindergarten hours',
+  reasonDry: 'Dry for the rest of the day',
   reasonSunny: 'Mostly sunny',
   reasonBreezy: (kmh) => `Breezy — up to ${kmh} km/h`,
   reasonWindy: (kmh) => `Windy — up to ${kmh} km/h`,
   timeOfDay: (hour) => {
-    if (hour <= 9) return 'at drop-off';
+    if (hour < 9) return 'early in the morning';
     if (hour < 12) return 'in the morning';
     if (hour < 14) return 'around lunch';
-    if (hour < 16) return 'after lunch';
-    return 'at pick-up';
+    if (hour < 18) return 'in the afternoon';
+    return 'in the evening';
   },
 
   // Forecast section
@@ -65,10 +65,12 @@ export const copy = {
   chartAlt: 'Chart of feels-like temperature and chance of rain per hour. The same data is in the table below.',
   legendTemperature: 'Line: feels-like temperature (°C, left axis)',
   legendRain: 'Bars: chance of rain (%, right axis)',
-  legendWindow: (start, end) => `Shaded: kindergarten hours ${start}–${end}`,
+  legendPast: 'Grey: hours already passed',
+  legendNow: (time) => `Green column: now (${time})`,
+  nowMarker: 'Now',
   chartUnavailable: 'The chart could not be drawn on this device. The table below shows the same forecast.',
   tableSummary: 'View the hourly forecast as a table',
-  tableCaption: 'Hourly forecast for kindergarten hours',
+  tableCaption: (start, end) => `Hourly forecast, ${start}–${end}`,
   tableColumns: ['Time', 'Feels like', 'Rain chance', 'Condition', 'Wind'],
 
   // Tips + footer

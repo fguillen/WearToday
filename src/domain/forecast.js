@@ -119,6 +119,24 @@ export function selectWindowHours(hours, startHour, endHour) {
   return hours.filter((hour) => hour.hour >= startHour && hour.hour <= endHour);
 }
 
+// Wall-clock date and hour in the forecast's timezone, e.g. { date: '2026-09-25', hour: 9 }.
+export function localDateHour(date, timeZone = 'Europe/Berlin') {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23', timeZone })
+      .formatToParts(date)
+      .map((part) => [part.type, part.value])
+  );
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, hour: Number(parts.hour) };
+}
+
+// Index of the hour we are in now, or -1 when `now` falls outside `hours`
+// (another day, or before/after the tracked range).
+export function currentHourIndex(hours, now, timeZone = 'Europe/Berlin') {
+  const { date, hour } = localDateHour(now, timeZone);
+  const key = `${date}T${String(hour).padStart(2, '0')}:00`;
+  return hours.findIndex((entry) => entry.time === key);
+}
+
 export function feelsLike(hour) {
   return hour.apparentTemperatureC ?? hour.temperatureC;
 }

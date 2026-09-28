@@ -6,7 +6,7 @@ import { WeatherServiceError } from '../src/services/weather-service.js';
 export const FIXTURE_DATE = '2026-09-25';
 
 const pad = (value) => String(value).padStart(2, '0');
-const inWindow = (hour) => hour >= 8 && hour <= 17;
+const inDay = (hour) => hour >= 7 && hour <= 22;
 
 const BASE_HOUR = {
   temperature: 12,
@@ -76,29 +76,29 @@ export function buildRawForecast({ date = FIXTURE_DATE, perHour = () => ({}), om
 }
 
 export const SCENARIOS = {
-  // Hot, clear and dry in the window; a night-time shower must be ignored.
+  // Hot, clear and dry all day; a late-night shower must be ignored.
   'sunny-hot': (hour) =>
-    inWindow(hour)
+    inDay(hour)
       ? { temperature: 24 + (hour - 8) * 0.6, apparent: 23 + (hour - 8) * 0.6, cloudCover: 10, weatherCode: 0, rainProbability: 5 }
-      : { temperature: 17, apparent: 16, cloudCover: 30, weatherCode: 1, rainProbability: hour === 22 ? 80 : 0 },
+      : { temperature: 17, apparent: 16, cloudCover: 30, weatherCode: 1, rainProbability: hour === 23 ? 80 : 0 },
   // Mild, partly cloudy, dry.
   'mild-dry': (hour) =>
-    inWindow(hour)
+    inDay(hour)
       ? { temperature: 19 + (hour - 8) * 0.3, apparent: 17 + (hour - 8) * 0.3, cloudCover: 60, weatherCode: 2, rainProbability: 10 }
       : { temperature: 14, apparent: 13, cloudCover: 70, weatherCode: 3 },
   // Fresh, overcast, dry, breezy.
   'fresh-dry': (hour) =>
-    inWindow(hour)
+    inDay(hour)
       ? { temperature: 13 + (hour - 8) * 0.4, apparent: 10 + (hour - 8) * 0.4, cloudCover: 90, weatherCode: 3, rainProbability: 20, wind: 22 }
       : { temperature: 9, apparent: 7, cloudCover: 90, weatherCode: 3 },
-  // Cold and dry; the night is even colder but outside the window.
+  // Cold and dry; the night is even colder but outside the tracked day.
   'cold-dry': (hour) =>
-    inWindow(hour)
+    inDay(hour)
       ? { temperature: 6 + (hour - 8) * 0.5, apparent: 3 + (hour - 8) * 0.5, cloudCover: 30, weatherCode: 1, rainProbability: 5 }
       : { temperature: 1, apparent: -2, cloudCover: 20, weatherCode: 0 },
   // Cold with rain arriving after lunch.
   'cold-rain': (hour) =>
-    inWindow(hour)
+    inDay(hour)
       ? {
           temperature: 9 + (hour - 8) * 0.5,
           apparent: 7.4 + (hour - 8) * 0.5,
@@ -111,7 +111,7 @@ export const SCENARIOS = {
       : { temperature: 8, apparent: 6, cloudCover: 95, weatherCode: 3 },
   // Warm but showery.
   'warm-rain': (hour) =>
-    inWindow(hour)
+    inDay(hour)
       ? {
           temperature: 20 + (hour - 8) * 0.3,
           apparent: 18 + (hour - 8) * 0.3,

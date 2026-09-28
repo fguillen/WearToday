@@ -3,6 +3,7 @@ import {
   ForecastShapeError,
   UNKNOWN_WEATHER,
   currentConditions,
+  currentHourIndex,
   getWeatherMeta,
   normalizeForecast,
   selectWindowHours
@@ -72,6 +73,22 @@ describe('selectWindowHours', () => {
     const forecast = normalizeForecast(buildRawForecast());
     const window = selectWindowHours(forecast.hours, 8, 17);
     expect(window.map((hour) => hour.hour)).toEqual([8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
+  });
+});
+
+describe('currentHourIndex', () => {
+  const hours = selectWindowHours(normalizeForecast(buildRawForecast()).hours, 7, 22);
+
+  it('finds the Berlin wall-clock hour (CEST, UTC+2)', () => {
+    expect(currentHourIndex(hours, new Date('2026-09-25T05:00:00Z'))).toBe(0);
+    expect(currentHourIndex(hours, new Date('2026-09-25T07:59:59Z'))).toBe(2);
+    expect(currentHourIndex(hours, new Date('2026-09-25T20:30:00Z'))).toBe(15);
+  });
+
+  it('returns -1 outside the tracked hours or on another day', () => {
+    expect(currentHourIndex(hours, new Date('2026-09-25T04:59:00Z'))).toBe(-1);
+    expect(currentHourIndex(hours, new Date('2026-09-25T21:00:00Z'))).toBe(-1);
+    expect(currentHourIndex(hours, new Date('2026-09-26T08:00:00Z'))).toBe(-1);
   });
 });
 
