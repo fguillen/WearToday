@@ -657,7 +657,7 @@ Then manually verify in a browser:
 
 - 320px-wide phone viewport, standard desktop viewport, and 200% zoom.
 - keyboard-only interaction.
-- normal, cloudy/dry, cold/dry, cold/rainy, and warm/rainy fixtures via a development-only fixture switch.
+- every weather scenario via the development-only weather simulator panel (`npm run dev`), which also sets a frozen clock and the loading, offline and stale states; views are bookmarkable, e.g. `/?fixture=storm&now=15:30&state=stale`.
 - slow network/disabled network while a cache is present and absent.
 
 ---

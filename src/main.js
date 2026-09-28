@@ -10,19 +10,37 @@ import { createApp } from './ui/app.js';
 
 async function boot() {
   const root = document.querySelector('#app');
-  const deps = {};
 
-  // Development-only fixture switch, e.g. /?fixture=cold-rain. Removed from
-  // production builds because import.meta.env.DEV is statically false there.
+  // Development-only weather simulator, e.g. /?fixture=storm&now=15:30&state=stale.
+  // Removed from production builds because import.meta.env.DEV is statically
+  // false there.
   if (import.meta.env.DEV) {
-    const fixtureName = new URLSearchParams(window.location.search).get('fixture');
-    if (fixtureName) {
-      const { createFixtureWeatherService } = await import('../tests/fixtures.js');
-      deps.weatherService = createFixtureWeatherService(fixtureName);
-    }
+    const sim = await import('./dev/simulator.js');
+    const { mountSimPanel } = await import('./dev/sim-panel.js');
+    let app = null;
+
+    const mount = (config) => {
+      app?.destroy();
+      const deps = {};
+      if (config.now) deps.now = sim.createSimClock(config.now);
+      if (sim.usesSimulatedWeather(config)) deps.weatherService = sim.createSimWeatherService(config, deps.now);
+      app = createApp(root, deps);
+      app.start();
+    };
+
+    const config = sim.readSimConfig(window.location.search);
+    mountSimPanel(document, {
+      config,
+      onChange(next) {
+        history.replaceState(null, '', `${window.location.pathname}${sim.simSearch(next)}`);
+        mount(next);
+      }
+    });
+    mount(config);
+    return;
   }
 
-  createApp(root, deps).start();
+  createApp(root).start();
 }
 
 boot();

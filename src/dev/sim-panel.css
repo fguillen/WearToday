@@ -1,0 +1,105 @@
+/* Development-only weather simulator panel. Never shipped. */
+
+.sim-panel {
+  position: fixed;
+  right: var(--space-md);
+  bottom: var(--space-md);
+  z-index: 1000;
+  width: min(280px, calc(100vw - 2 * var(--space-md)));
+  font: 500 13px/1.35 var(--font-body);
+  color: var(--clr-text);
+  background: var(--clr-bg);
+  border: 2px dashed var(--clr-accent-strong);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgb(74 51 32 / 0.18);
+}
+
+.sim-panel > summary {
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sim-summary {
+  font-family: var(--font-body);
+  font-weight: 500;
+  color: var(--clr-muted);
+}
+
+.sim-body {
+  display: grid;
+  gap: var(--space-md);
+  padding: 0 var(--space-md) var(--space-md);
+}
+
+.sim-field {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.sim-label {
+  display: flex;
+  justify-content: space-between;
+  padding: 0;
+  font-weight: 700;
+  color: var(--clr-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 11px;
+}
+
+.sim-label output {
+  color: var(--clr-text);
+  font-variant-numeric: tabular-nums;
+  text-transform: none;
+}
+
+.sim-panel select {
+  width: 100%;
+  padding: 6px var(--space-sm);
+  font: inherit;
+  color: inherit;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-grid);
+  border-radius: 8px;
+}
+
+.sim-panel input[type='range'] {
+  width: 100%;
+  accent-color: var(--clr-sky-strong);
+}
+
+.sim-panel input[type='range']:disabled {
+  opacity: 0.4;
+}
+
+.sim-check,
+.sim-state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  cursor: pointer;
+}
+
+.sim-states {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-md);
+}
+
+.sim-hint {
+  color: var(--clr-muted);
+  font-size: 11px;
+}
+
+.sim-hint a {
+  color: var(--clr-sky-strong);
+}
