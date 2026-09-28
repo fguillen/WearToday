@@ -1,15 +1,15 @@
-# Ready to go
+# Wear Today
 
-**What should a toddler wear to kindergarten in Berlin today?**
+**What should you wear in Berlin today?**
 
-Ready to go is a small web app for the morning rush. It reads today's
-Berlin forecast and suggests one outfit for a three-year-old, with an
+Wear Today is a small web app for the morning rush. It reads today's
+Berlin forecast and suggests one outfit for the day, with an
 illustration, a garment checklist, an hour-by-hour weather chart and the
 reasons behind the choice ("Feels like 7°C in the morning", "Rain is likely
 (up to 70%)").
 
-It is a suggestion, not a safety guarantee. The parent still decides,
-keeping in mind the child, the day's activities and the kindergarten's rules.
+It is a suggestion, not a safety guarantee. You still decide, keeping in
+mind how you feel, the day's plans and any dress rules.
 
 Live at **https://fguillen.github.io/ToddlerOutfitAdvisor/**.
 

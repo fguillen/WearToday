@@ -10,9 +10,9 @@ export default defineConfig({
       injectRegister: 'script',
       includeManifestIcons: false,
       manifest: {
-        name: 'Ready to go',
-        short_name: 'Ready to go',
-        description: 'What should a toddler wear to kindergarten in Berlin today?',
+        name: 'Wear Today',
+        short_name: 'Wear Today',
+        description: 'What should you wear in Berlin today?',
         lang: 'en',
         display: 'standalone',
         orientation: 'portrait',

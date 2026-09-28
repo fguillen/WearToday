@@ -2,7 +2,7 @@
   "name": "toddler-outfit-advisor",
   "private": true,
   "version": "0.1.0",
-  "description": "What should a toddler wear to kindergarten in Berlin today? A small weather-based outfit advisor.",
+  "description": "What should you wear in Berlin today? A small weather-based outfit advisor.",
   "license": "MIT",
   "author": "Fernando Guillén Suárez",
   "type": "module",

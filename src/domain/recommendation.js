@@ -2,8 +2,8 @@ import { copy, formatters } from '../copy.js';
 import { OUTFITS, getOutfitById } from '../data/outfits.js';
 import { feelsLike, selectWindowHours } from './forecast.js';
 
-// Defaults, not objective child-safety thresholds. A future settings surface
-// should let parents adjust them.
+// Defaults, not objective safety thresholds. A future settings surface
+// should let users adjust them.
 export const DEFAULTS = Object.freeze({
   timezone: 'Europe/Berlin',
   dayStartHour: 7,

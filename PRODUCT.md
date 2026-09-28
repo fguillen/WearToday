@@ -1,6 +1,6 @@
-# Toddler Outfit Advisor — Prototype Design Document
+# Wear Today — Prototype Design Document
 
-> **Purpose:** A Claude Code–ready specification for a small, intuitive web app that recommends what a three-year-old should wear to kindergarten in Berlin each morning.
+> **Purpose:** A Claude Code–ready specification for a small, intuitive web app that recommends what to wear in Berlin each day.
 >
 > **Implementation target:** Vanilla JavaScript (ECMAScript 2025), Vite, Vitest, and no TypeScript.
 >
@@ -10,7 +10,7 @@
 
 ## 1. Product summary
 
-**Toddler Outfit Advisor** turns Berlin’s forecast into one clear, parent-controlled clothing recommendation. It shows:
+**Wear Today** turns Berlin’s forecast into one clear, user-controlled clothing recommendation. It shows:
 
 1. a visual illustration of the recommended outfit;
 2. a readable list of garments to put on;
@@ -21,13 +21,13 @@ The app uses local, deterministic weather rules to select from predefined outfit
 
 ### 1.1 Target user and morning flow
 
-The primary user is a parent at home in the morning, likely using a phone.
+The primary user is anyone getting dressed at home in the morning, likely using a phone.
 
 1. Open the app.
 2. See today’s Berlin forecast and the default weather-rules recommendation immediately.
 3. Read the prominent outfit illustration, garment checklist, and “why” chips.
 4. Check the hourly chart if a rain or temperature change is expected later.
-5. Make the final parent decision.
+5. Make the final decision.
 
 The app should feel useful in under **10 seconds**, without requiring an account or configuration before weather information appears.
 
@@ -36,7 +36,7 @@ The app should feel useful in under **10 seconds**, without requiring an account
 - **One clear answer first.** The main recommendation is unmissable; details are available but secondary.
 - **No invented garments.** Recommendations come only from the outfit catalog.
 - **Conservative around rain and cold.** When rain and cold coincide, prefer the warmer, rain-ready outfit.
-- **Transparent rather than authoritative.** Show the actual weather signals used and communicate that a parent should consider the child, activity level, and kindergarten policy.
+- **Transparent rather than authoritative.** Show the actual weather signals used and communicate that users should consider their own comfort, activity level, and any dress rules.
 - **Private by default.** No accounts, analytics, tracking, or server-side storage in the prototype.
 - **Mobile-first and accessible.** Large tap targets, readable contrast, keyboard usability, and a text alternative for every visual chart.
 
@@ -60,15 +60,15 @@ The app should feel useful in under **10 seconds**, without requiring an account
 
 - Login, user accounts, sync, notifications, email, or background jobs.
 - A production backend or server-side secret storage.
-- Medical, health, UV, allergy, or school-policy guidance.
+- Medical, health, UV, allergy, or dress-code guidance.
 - Automatic purchase lists or wardrobe inventory.
-- Historical personalization or learning from past parent choices.
-- A claim that the app is “accurate” or a guarantee that a child will be warm/dry.
+- Historical personalization or learning from past user choices.
+- A claim that the app is “accurate” or a guarantee that anyone will be warm/dry.
 
 ### Design-for-later, but do not build in v1
 
 - Location search and saved locations.
-- Parent-adjustable temperature/rain thresholds.
+- User-adjustable temperature/rain thresholds.
 - A visual editor for additional outfit combinations.
 - Localization (start English; keep all visible strings in one `copy.js` module so German can be added cleanly).
 
@@ -162,9 +162,9 @@ Use native ES modules throughout. Keep business logic in `src/domain/`; UI modul
 
 ### 5.1 Canonical v1 catalog
 
-Use stable IDs. Visible labels should be friendly and correct the obvious misspellings in the source requirements (`pants`, `sweater`, `socks`). In the UI, label “water shoes” as **“waterproof shoes”** with an optional parent-facing parenthetical “(water shoes)” until the wording is confirmed.
+Use stable IDs. Visible labels should be friendly and correct the obvious misspellings in the source requirements (`pants`, `sweater`, `socks`). In the UI, label “water shoes” as **“waterproof shoes”** with an optional user-facing parenthetical “(water shoes)” until the wording is confirmed.
 
-| ID | Parent-facing name | Garments |
+| ID | Display name | Garments |
 | --- | --- | --- |
 | `sunny-hot` | Sunny & hot | Sun hat; short-sleeve T-shirt; shorts; sandals |
 | `mild-dry` | Mild & dry | Long-sleeve T-shirt; sweater; long pants; socks; closed shoes |
@@ -175,7 +175,7 @@ Use stable IDs. Visible labels should be friendly and correct the obvious misspe
 | `super-rain` | Pouring rain | Long-sleeve T-shirt; sweater; rain jacket; long pants; mud overalls; socks; wellington boots; umbrella |
 | `super-cold` | Freezing | Warm hat; neck warmer; thermal underwear; long-sleeve T-shirt; sweater; snowsuit; socks; winter boots; gloves |
 
-A neck warmer replaces a scarf because many kindergartens do not allow scarves (they can catch on playground equipment). Mud overalls (German: *Matschhose*) replace separate rain pants.
+A neck warmer replaces a scarf because it stays in place and cannot catch on things. Mud overalls (German: *Matschhose*) replace separate rain pants.
 
 Define this once in `src/data/outfits.js` rather than duplicating garment strings in the UI, rules, and tests. Garments live in their own catalog, keyed by an id that is also the illustration layer and the icon name. Each garment belongs to one body section:
 
@@ -199,7 +199,7 @@ export const OUTFITS = [
   {
     id: 'sunny-hot',
     label: 'Sunny & hot',
-    description: 'Light clothes and sun protection for a dry, warm, sunny kindergarten day.',
+    description: 'Light clothes and sun protection for a dry, warm, sunny day.',
     garments: ['sunHat', 'shortTee', 'shorts', 'sandals'],
     tags: ['dry', 'warm', 'sunny']
   },
@@ -213,7 +213,7 @@ Outfits that already protect against rain carry the `waterproof` tag.
 
 The catalog is exactly the eight combinations above. Add further records, and garments, only in `src/data/outfits.js`.
 
-Later combinations can be added as catalog entries with the same fields. Examples to consider only after a parent specifies their actual wardrobe:
+Later combinations can be added as catalog entries with the same fields. Examples to consider only after a user specifies their actual wardrobe:
 
 - windy but dry;
 - spare clothes to pack in the backpack;
@@ -223,7 +223,7 @@ The recommendation keeps a `baseOutfit` plus `addOns` structure: if rain is like
 
 ### 5.3 Configurable defaults
 
-Place thresholds in a small exported constant in `src/domain/recommendation.js`. These are **defaults**, not objective child-safety thresholds. Give the user a future settings surface rather than hard-coding an unchangeable claim.
+Place thresholds in a small exported constant in `src/domain/recommendation.js`. These are **defaults**, not objective safety thresholds. Give the user a future settings surface rather than hard-coding an unchangeable claim.
 
 ```js
 export const DEFAULTS = {
@@ -355,7 +355,7 @@ Implement `fetchBerlinForecast({ signal } = {})` in `weather-service.js`.
 - Normalize every API response into an application-owned forecast structure; components must not consume provider JSON directly.
 - Cache the normalized result plus `fetchedAt` in `localStorage` for 15 minutes (so an installed app reopened offline still shows today’s last forecast). This avoids needless calls while remaining fresh enough for a morning check.
 - Include a **Refresh** button. It bypasses the cache, aborts a prior in-flight request, and sets `aria-busy="true"` on the weather region.
-- If the explicit `dwd_icon_d2` request fails because of an availability issue, retry once with `models=auto`; annotate the developer-only normalized source as `auto`. Do not expose technical model names in the parent UI.
+- If the explicit `dwd_icon_d2` request fails because of an availability issue, retry once with `models=auto`; annotate the developer-only normalized source as `auto`. Do not expose technical model names in the UI.
 - Do not store weather data remotely.
 
 ### 6.3 Normalized domain shape
@@ -440,7 +440,7 @@ Use an `unknown` fallback for unmapped codes so an API update cannot break the U
 
 ### 7.1 Visual direction
 
-Create a warm, calm, modern interface for a busy parent. It should be playful enough to feel child-adjacent but not cartoonish or cluttered. The reference design is `docs/template/index.html`: a sky-blue hero with rounded bottom corners, warm brown ink, cream cards, pill chips and a yellow accent.
+Create a warm, calm, modern interface for a busy person getting ready in the morning. It should be playful and friendly but not cartoonish or cluttered. The reference design is `docs/template/index.html`: a sky-blue hero with rounded bottom corners, warm brown ink, cream cards, pill chips and a yellow accent.
 
 **Design tokens:**
 
@@ -470,7 +470,7 @@ Create a warm, calm, modern interface for a busy parent. It should be playful en
 
 ```text
 <header>
-  Brand: “Ready to go”
+  Brand: “Wear Today”
   Location: Berlin · Updated 07:12
   [Refresh]
 </header>
@@ -498,7 +498,7 @@ Create a warm, calm, modern interface for a busy parent. It should be playful en
 
   <section aria-labelledby="tips-heading">                  // Calm disclaimer
     “Before you go”
-    “Forecasts can change. Consider your child’s comfort, activity, and kindergarten rules.”
+    “Forecasts can change. Consider your own comfort, your plans for the day, and any dress rules where you’re going.”
   </section>
 </main>
 
@@ -521,7 +521,7 @@ The recommendation card is the visual focal point.
   - `Rain likely in the afternoon`
   - `Breezy — up to 22 km/h`
 - Source line: `Weather rules`.
-- Do not display a child’s age in the card.
+- Do not display an age in the card.
 
 ### 7.4 Outfit illustration
 
@@ -615,10 +615,10 @@ weather.status: idle | loading | ready | error
 flowchart LR
   A[Browser: Berlin coordinates] -->|Forecast request| B[Open-Meteo / DWD]
   B -->|Hourly forecast| A
-  A -->|Rules-based recommendation| D[Parent]
+  A -->|Rules-based recommendation| D[User]
 ```
 
-The only network request is the forecast request. Do not send browser data, child identity, or stored preferences to any third party.
+The only network request is the forecast request. Do not send browser data, user identity, or stored preferences to any third party.
 
 ---
 

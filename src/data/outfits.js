@@ -39,7 +39,7 @@ export const OUTFITS = [
   {
     id: 'sunny-hot',
     label: 'Sunny & hot',
-    description: 'Light clothes and sun protection for a dry, warm, sunny kindergarten day.',
+    description: 'Light clothes and sun protection for a dry, warm, sunny day.',
     garments: ['sunHat', 'shortTee', 'shorts', 'sandals'],
     tags: ['dry', 'warm', 'sunny']
   },

@@ -1,4 +1,4 @@
-// All parent-facing strings live here so a German translation can be added later.
+// All user-facing strings live here so a German translation can be added later.
 
 export const LOCALE = 'en-GB';
 export const TIMEZONE = 'Europe/Berlin';
@@ -6,7 +6,7 @@ export const TIMEZONE = 'Europe/Berlin';
 const pad = (value) => String(value).padStart(2, '0');
 
 export const copy = {
-  brand: 'Ready to go',
+  brand: 'Wear Today',
   locationLabel: 'Berlin',
   refresh: 'Refresh',
   refreshing: 'Refreshing…',
@@ -100,7 +100,7 @@ export const copy = {
 
   // Tips + footer
   tipsHeading: 'Before you go…',
-  tipsText: 'Forecasts can change. Consider your child’s comfort, activity, and kindergarten rules.',
+  tipsText: 'Forecasts can change. Consider your own comfort, your plans for the day, and any dress rules where you’re going.',
   footer: 'Weather data: Open-Meteo / DWD (CC BY 4.0) · Forecasts are estimates',
 
   // Live announcements
