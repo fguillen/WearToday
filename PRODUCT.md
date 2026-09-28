@@ -49,7 +49,7 @@ The app should feel useful in under **10 seconds**, without requiring an account
 - Berlin as the preconfigured location (`52.5200, 13.4050`, `Europe/Berlin`).
 - Fetch the current conditions and today’s hourly forecast.
 - Display a composable, in-app SVG outfit illustration — no third-party image assets required.
-- Display five parent-supplied canonical outfit combinations.
+- Display eight canonical outfit combinations built from one garment catalog.
 - Make a deterministic rules recommendation.
 - Render an hourly temperature/apparent-temperature line plus precipitation-probability bars.
 - Handle loading, stale, network, and API error states gracefully.
@@ -165,71 +165,60 @@ Use stable IDs. Visible labels should be friendly and correct the obvious misspe
 
 | ID | Parent-facing name | Garments |
 | --- | --- | --- |
-| `sunny-hot` | Sunny & hot | Short-sleeve T-shirt; shorts; sandals |
-| `mild-dry` | Mild & dry | Long pants; long-sleeve T-shirt; sweater; socks; closed shoes |
-| `fresh-dry` | Fresh & dry | Long pants; long-sleeve T-shirt; sweater; jacket; socks; closed shoes |
-| `cold-dry` | Cold & dry | Long pants; long-sleeve T-shirt; sweater; jacket; scarf; hat; socks; closed shoes |
-| `cold-rain` | Cold & rainy | Long pants; long-sleeve T-shirt; sweater; jacket; scarf; hat; umbrella; socks; waterproof shoes; rain pants |
+| `sunny-hot` | Sunny & hot | Sun hat; short-sleeve T-shirt; shorts; sandals |
+| `mild-dry` | Mild & dry | Long-sleeve T-shirt; sweater; long pants; socks; closed shoes |
+| `fresh-dry` | Fresh & dry | Long-sleeve T-shirt; sweater; jacket; long pants; socks; closed shoes |
+| `cold-dry` | Cold & dry | Hat; neck warmer; long-sleeve T-shirt; sweater; jacket; long pants; socks; closed shoes |
+| `hot-rain` | Rainy & mild | Long-sleeve T-shirt; sweater; rain jacket; long pants; socks; waterproof shoes |
+| `cold-rain` | Cold & rainy | Hat; neck warmer; long-sleeve T-shirt; sweater; jacket; long pants; mud overalls; socks; waterproof shoes; umbrella |
+| `super-rain` | Pouring rain | Long-sleeve T-shirt; sweater; rain jacket; long pants; mud overalls; socks; wellington boots; umbrella |
+| `super-cold` | Freezing | Warm hat; neck warmer; thermal underwear; long-sleeve T-shirt; sweater; snowsuit; socks; winter boots; gloves |
 
-Define this once in `src/data/outfits.js` rather than duplicating garment strings in the UI, rules, and tests.
+A neck warmer replaces a scarf because many kindergartens do not allow scarves (they can catch on playground equipment). Mud overalls (German: *Matschhose*) replace separate rain pants.
+
+Define this once in `src/data/outfits.js` rather than duplicating garment strings in the UI, rules, and tests. Garments live in their own catalog, keyed by an id that is also the illustration layer and the icon name. Each garment belongs to one body section:
+
+| Section id | Checklist label | Garments |
+| --- | --- | --- |
+| `head` | Head | sun hat, hat, warm hat, neck warmer |
+| `middle` | Body | thermal underwear, short/long-sleeve T-shirt, sweater, jacket, rain jacket, snowsuit |
+| `low` | Legs | shorts, long pants, mud overalls |
+| `bottom` | Feet | socks, sandals, closed shoes, waterproof shoes, wellington boots, winter boots |
+| `carry` | Carry | umbrella, gloves |
 
 ```js
+export const GARMENTS = {
+  sunHat: { label: 'Sun hat', section: 'head' },
+  // …
+  waterproofShoes: { label: 'Waterproof shoes', section: 'bottom', note: '(water shoes)' },
+  // …
+};
+
 export const OUTFITS = [
   {
     id: 'sunny-hot',
     label: 'Sunny & hot',
-    description: 'Light clothes for a dry, warm, sunny kindergarten day.',
-    garments: ['Short-sleeve T-shirt', 'Shorts', 'Sandals'],
-    visualLayers: ['shortTee', 'shorts', 'sandals'],
+    description: 'Light clothes and sun protection for a dry, warm, sunny kindergarten day.',
+    garments: ['sunHat', 'shortTee', 'shorts', 'sandals'],
     tags: ['dry', 'warm', 'sunny']
   },
-  {
-    id: 'mild-dry',
-    label: 'Mild & dry',
-    description: 'Layers for a mild, cloudy or partly cloudy dry day.',
-    garments: ['Long pants', 'Long-sleeve T-shirt', 'Sweater', 'Socks', 'Closed shoes'],
-    visualLayers: ['longTee', 'sweater', 'longPants', 'socks', 'shoes'],
-    tags: ['dry', 'mild']
-  },
-  {
-    id: 'fresh-dry',
-    label: 'Fresh & dry',
-    description: 'A warmer outer layer for a fresh dry day.',
-    garments: ['Long pants', 'Long-sleeve T-shirt', 'Sweater', 'Jacket', 'Socks', 'Closed shoes'],
-    visualLayers: ['longTee', 'sweater', 'jacket', 'longPants', 'socks', 'shoes'],
-    tags: ['dry', 'fresh']
-  },
-  {
-    id: 'cold-dry',
-    label: 'Cold & dry',
-    description: 'Warm layers with head and neck protection for a cold dry day.',
-    garments: ['Long pants', 'Long-sleeve T-shirt', 'Sweater', 'Jacket', 'Scarf', 'Hat', 'Socks', 'Closed shoes'],
-    visualLayers: ['longTee', 'sweater', 'jacket', 'longPants', 'scarf', 'hat', 'socks', 'shoes'],
-    tags: ['dry', 'cold']
-  },
-  {
-    id: 'cold-rain',
-    label: 'Cold & rainy',
-    description: 'Warm, rain-ready layers for a cold wet day.',
-    garments: ['Long pants', 'Long-sleeve T-shirt', 'Sweater', 'Jacket', 'Scarf', 'Hat', 'Umbrella', 'Socks', 'Waterproof shoes', 'Rain pants'],
-    visualLayers: ['longTee', 'sweater', 'jacket', 'longPants', 'scarf', 'hat', 'socks', 'waterproofShoes', 'rainPants', 'umbrella'],
-    tags: ['rain', 'cold']
-  }
+  // …
 ];
 ```
 
+Outfits that already protect against rain carry the `waterproof` tag.
+
 ### 5.2 “Other combinations”
 
-The initial catalog should be exactly the five combinations above. Build the data model to support additional records later, but do not invent extra garments in v1.
+The catalog is exactly the eight combinations above. Add further records, and garments, only in `src/data/outfits.js`.
 
 Later combinations can be added as catalog entries with the same fields. Examples to consider only after a parent specifies their actual wardrobe:
 
-- warm but rainy;
 - windy but dry;
 - spare clothes to pack in the backpack;
 - a lighter rain-shell option.
 
-The recommendation view can already support a `baseOutfit` plus `addOns` structure so a future “mild rain” record does not require a rewrite.
+The recommendation keeps a `baseOutfit` plus `addOns` structure: if rain is likely and the chosen outfit is not tagged `waterproof`, a “Pack rain gear” add-on is attached. With the current catalog every rainy branch already picks a waterproof outfit.
 
 ### 5.3 Configurable defaults
 
@@ -248,6 +237,8 @@ export const DEFAULTS = {
   rainProbabilityThreshold: 50,
   rainAmountThresholdMm: 0.3,
   coldRainMaximumApparentC: 12,
+  freezingMaximumApparentC: 0,
+  heavyRainTotalMm: 5,
   cacheMinutes: 15
 };
 ```
@@ -285,14 +276,17 @@ Rules, in order:
 3. hotAndSunny = rainLikely is false
                  AND minimum apparent temperature >= 22°C
                  AND at least 65% of window hours have cloud cover <= 35%.
-4. If rainLikely AND minimum apparent temperature < 12°C: choose cold-rain.
-5. Else if hotAndSunny: choose sunny-hot.
-6. Else if minimum apparent temperature >= 16°C: choose mild-dry.
-7. Else if minimum apparent temperature >= 9°C: choose fresh-dry.
-8. Else: choose cold-dry.
+4. If minimum apparent temperature < 0°C: choose super-cold (the snowsuit is waterproof, so this wins over rain).
+5. Else if rainLikely AND total precipitation >= 5 mm: choose super-rain.
+6. Else if rainLikely AND minimum apparent temperature < 12°C: choose cold-rain.
+7. Else if rainLikely: choose hot-rain.
+8. Else if hotAndSunny: choose sunny-hot.
+9. Else if minimum apparent temperature >= 16°C: choose mild-dry.
+10. Else if minimum apparent temperature >= 9°C: choose fresh-dry.
+11. Else: choose cold-dry.
 ```
 
-For a future warm-rain catalog, choose a dry base outfit using steps 5–8 then add rain gear. In v1, if rain is likely but not cold, preserve the nearest dry base outfit **and add a prominent “Pack rain gear” note**; do not force the `cold-rain` outfit on a warm day.
+Do not force the `cold-rain` outfit on a warm rainy day; `hot-rain` keeps the lighter layers and swaps in a rain jacket and waterproof shoes.
 
 ---
 
@@ -519,8 +513,8 @@ Create a warm, calm, modern interface for a busy parent. It should be playful en
 The recommendation card is the visual focal point.
 
 - Header: `PUT ON TODAY` in small uppercase letter spacing; then friendly outfit name.
-- Illustration: a neutral, simple child silhouette with layered SVG elements. Each `visualLayer` in the catalog maps to an SVG `<g>` with meaningful `aria-label` text and a distinct garment color/shape.
-- Garment checklist: garments grouped into rows by body zone (Head, Top, Legs, Feet, Carry) with a short hint per zone; each garment is a white pill with an inline SVG garment icon and text.
+- Illustration: a neutral, simple child silhouette with layered SVG elements. Each garment in the catalog maps to an SVG `<g>` with meaningful `aria-label` text and a distinct garment color/shape.
+- Garment checklist: garments grouped into rows by body section (Head, Body, Legs, Feet, Carry) with a short hint per section; each garment is a white pill with an inline SVG garment icon and text.
 - Reason chips (shown in the hero, see 7.2): maximum three, generated from `daySummary.reasons`. Examples:
   - `Feels like 7°C in the morning`
   - `Rain likely in the afternoon`
@@ -532,18 +526,19 @@ The recommendation card is the visual focal point.
 
 Create the illustration with semantic SVG groups, not a single inaccessible image.
 
-Layer order:
+Layers are grouped by body section, inner to outer within a section. Sections are drawn in this order so outer garments cover inner ones:
 
 ```text
-body → longTee/shortTee → sweater → longPants/shorts → jacket → rainPants
-     → socks → shoes/waterproofShoes/sandals → scarf → hat → umbrella
+body → low (legs) → bottom (feet) → middle (body) → head → carry
 ```
+
+Shoes cover the trouser hems, tops and the snowsuit cover the waistband and boot tops, the neck warmer and hats cover the jacket collar, and the umbrella goes last.
 
 Implementation constraints:
 
 - `renderOutfitIllustration(outfit)` returns a string or DOM fragment with `<svg role="img" aria-label="Illustration: …">`.
 - Provide a text label beneath the SVG (`Illustration: Cold & rainy outfit`) as a no-graphics fallback.
-- Use a compact weather backdrop in the illustration (sun/cloud/rain), but not a second data source.
+- Use a compact weather backdrop in the illustration (sun/cloud/rain/snow), but not a second data source.
 - An umbrella must not hide garment layers or the accessible label.
 
 ### 7.5 Hourly weather chart
@@ -675,7 +670,7 @@ The prototype is complete when all of the following are true:
 2. `npm run test` completes successfully with coverage of all outfit branches.
 3. The application loads Berlin weather and selects a rules-based outfit.
 4. The hourly chart and accessible table use the same normalized forecast data.
-5. The five supplied outfit combinations appear correctly with accurate garment lists and SVG layers.
+5. The eight catalog outfit combinations appear correctly with accurate garment lists and SVG layers.
 6. UI error states are clear, non-technical, and never reveal a raw provider response.
 7. Attribution to Open-Meteo/DWD appears in the footer, consistent with the provider’s CC BY attribution requirement.
 

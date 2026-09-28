@@ -110,7 +110,7 @@ export const SCENARIOS = {
         }
       : { temperature: 8, apparent: 6, cloudCover: 95, weatherCode: 3 },
   // Warm but showery.
-  'warm-rain': (hour) =>
+  'hot-rain': (hour) =>
     inDay(hour)
       ? {
           temperature: 20 + (hour - 8) * 0.3,
@@ -120,7 +120,25 @@ export const SCENARIOS = {
           rainProbability: hour === 15 ? 60 : 25,
           precipitation: hour === 15 ? 0.4 : 0
         }
-      : { temperature: 16, apparent: 15, cloudCover: 80, weatherCode: 3 }
+      : { temperature: 16, apparent: 15, cloudCover: 80, weatherCode: 3 },
+  // Mild but pouring from late morning on: 1 mm/h over 8 hours.
+  'super-rain': (hour) =>
+    inDay(hour)
+      ? {
+          temperature: 15,
+          apparent: 13,
+          cloudCover: 100,
+          weatherCode: hour >= 10 && hour <= 17 ? 65 : 3,
+          rainProbability: hour >= 10 && hour <= 17 ? 90 : 40,
+          precipitation: hour >= 10 && hour <= 17 ? 1 : 0,
+          wind: 18
+        }
+      : { temperature: 13, apparent: 11, cloudCover: 100, weatherCode: 3 },
+  // Freezing morning that barely climbs above zero.
+  'super-cold': (hour) =>
+    inDay(hour)
+      ? { temperature: 0 + (hour - 8) * 0.4, apparent: -3 + (hour - 8) * 0.4, cloudCover: 40, weatherCode: 1, rainProbability: 5 }
+      : { temperature: -4, apparent: -8, cloudCover: 20, weatherCode: 0 }
 };
 
 export function rawScenario(name, options = {}) {

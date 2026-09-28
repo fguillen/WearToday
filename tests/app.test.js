@@ -44,28 +44,40 @@ describe('app', () => {
     // Hero: daily high/low plus rain and warmest-hour alerts for the hours ahead.
     const pills = [...root.querySelectorAll('.temp-range li, .weather-alerts li')].map((li) => li.textContent);
     expect(pills).toEqual(['High 16°', 'Low 8°', '70% rain in the afternoon', 'Warmest 14° at 22:00']);
-    // Garments grouped by body zone, in dressing order.
-    const zones = [...root.querySelectorAll('.clothing-row')].map((row) => ({
-      zone: row.querySelector('.layer-name').textContent,
+    // Garments grouped by body section, in dressing order.
+    const sections = [...root.querySelectorAll('.clothing-row')].map((row) => ({
+      section: row.querySelector('.layer-name').textContent,
       garments: [...row.querySelectorAll('.clothing-chip')].map((chip) => chip.textContent.trim())
     }));
-    expect(zones).toEqual([
-      { zone: 'Head', garments: ['Hat', 'Scarf'] },
-      { zone: 'Top', garments: ['Long-sleeve T-shirt', 'Sweater', 'Jacket'] },
-      { zone: 'Legs', garments: ['Long pants', 'Rain pants'] },
-      { zone: 'Feet', garments: ['Socks', 'Waterproof shoes (water shoes)'] },
-      { zone: 'Carry', garments: ['Umbrella'] }
+    expect(sections).toEqual([
+      { section: 'Head', garments: ['Hat', 'Neck warmer'] },
+      { section: 'Body', garments: ['Long-sleeve T-shirt', 'Sweater', 'Jacket'] },
+      { section: 'Legs', garments: ['Long pants', 'Mud overalls'] },
+      { section: 'Feet', garments: ['Socks', 'Waterproof shoes (water shoes)'] },
+      { section: 'Carry', garments: ['Umbrella'] }
     ]);
     expect($('svg[role="img"]').getAttribute('aria-label')).toMatch(/^Illustration: Cold & rainy outfit/);
     expect(root.querySelectorAll('svg [data-layer]').length).toBe(11);
     expect($('#main').getAttribute('aria-busy')).toBe('false');
   });
 
-  it('shows a prominent rain-gear note on a warm rainy day', async () => {
-    const { app, $ } = setup({ scenario: 'warm-rain' });
+  it('dresses a warm rainy day in a rain jacket instead of a rain-gear note', async () => {
+    const { app, $ } = setup({ scenario: 'hot-rain' });
     await app.start();
-    expect($('.outfit-name').textContent).toBe('Mild & dry');
-    expect($('.add-on').textContent).toContain('Pack rain gear');
+    expect($('.outfit-name').textContent).toBe('Rainy & mild');
+    expect($('.add-on')).toBeNull();
+    expect($('svg [data-layer="rainJacket"]')).not.toBeNull();
+  });
+
+  it('puts the snowsuit in the body section and hints at snow-ready feet on a freezing day', async () => {
+    const { app, $, root } = setup({ scenario: 'super-cold' });
+    await app.start();
+    expect($('.outfit-name').textContent).toBe('Freezing');
+    const hints = Object.fromEntries(
+      [...root.querySelectorAll('.clothing-row')].map((row) => [row.querySelector('.layer-name').textContent, row.querySelector('.layer-hint').textContent])
+    );
+    expect(Object.keys(hints)).toEqual(['Head', 'Body', 'Feet', 'Carry']);
+    expect(hints.Feet).toBe('Snow-ready');
   });
 
   it('refresh triggers a forced fetch and announces completion', async () => {

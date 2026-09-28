@@ -1,72 +1,37 @@
 import { copy } from '../copy.js';
-import { ADD_ONS } from '../data/outfits.js';
+import { ADD_ONS, GARMENTS, groupBySection } from '../data/outfits.js';
 import { escapeHtml } from './html.js';
 import { icon } from './icons.js';
 import { renderOutfitIllustration } from './outfit-illustration.js';
 
-// Presentation only: which body zone a catalog garment belongs to, in
-// dressing order, and the icon it gets. Garments missing here land in "carry".
-const ZONES = [
-  { id: 'head', garments: ['Hat', 'Scarf'] },
-  { id: 'top', garments: ['Short-sleeve T-shirt', 'Long-sleeve T-shirt', 'Sweater', 'Jacket'] },
-  { id: 'legs', garments: ['Shorts', 'Long pants', 'Rain pants'] },
-  { id: 'feet', garments: ['Socks', 'Sandals', 'Closed shoes', 'Waterproof shoes'] },
-  { id: 'carry', garments: ['Umbrella'] }
-];
-
-const GARMENT_ICONS = {
-  Hat: 'hat',
-  Scarf: 'scarf',
-  'Short-sleeve T-shirt': 'shortTee',
-  'Long-sleeve T-shirt': 'longTee',
-  Sweater: 'sweater',
-  Jacket: 'jacket',
-  Shorts: 'shorts',
-  'Long pants': 'longPants',
-  'Rain pants': 'rainPants',
-  Socks: 'socks',
-  Sandals: 'sandals',
-  'Closed shoes': 'shoes',
-  'Waterproof shoes': 'waterproofShoes',
-  Umbrella: 'umbrella'
-};
-
-export function groupGarments(garments) {
-  const known = new Set(ZONES.flatMap((zone) => zone.garments));
-  return ZONES.map((zone) => ({
-    id: zone.id,
-    garments:
-      zone.id === 'carry'
-        ? garments.filter((garment) => zone.garments.includes(garment) || !known.has(garment))
-        : zone.garments.filter((garment) => garments.includes(garment))
-  })).filter((zone) => zone.garments.length > 0);
-}
-
-function zoneHint(zone, daySummary) {
-  const hints = copy.zoneHints;
-  const has = (garment) => zone.garments.includes(garment);
-  switch (zone.id) {
-    case 'head': return hints.headCold(Math.round(daySummary.minApparentC));
-    case 'top': return hints.layers(zone.garments.length);
-    case 'legs': return has('Rain pants') ? hints.rainReady : has('Shorts') ? hints.short : hints.long;
-    case 'feet': return has('Waterproof shoes') ? hints.rainReady : has('Sandals') ? hints.open : hints.closed;
+function sectionHint({ section, garments }, daySummary) {
+  const hints = copy.sectionHints;
+  const has = (...ids) => ids.some((id) => garments.includes(id));
+  switch (section) {
+    case 'head': return has('sunHat') ? hints.sun : hints.headCold(Math.round(daySummary.minApparentC));
+    case 'middle': return hints.layers(garments.length);
+    case 'low': return has('mudOveralls') ? hints.rainReady : has('shorts') ? hints.short : hints.long;
+    case 'bottom':
+      if (has('waterproofShoes', 'wellies')) return hints.rainReady;
+      if (has('winterBoots')) return hints.snowReady;
+      return has('sandals') ? hints.open : hints.closed;
     default: return hints.carry;
   }
 }
 
-function renderZone(zone, daySummary) {
-  const labelId = `zone-${zone.id}`;
-  const items = zone.garments
-    .map((garment) => {
-      const note = copy.garmentNotes[garment];
-      return `<li class="clothing-chip">${icon(GARMENT_ICONS[garment] ?? 'unknown')}<span>${escapeHtml(garment)}${note ? ` <span class="muted">${escapeHtml(note)}</span>` : ''}</span></li>`;
+function renderSection(group, daySummary) {
+  const labelId = `section-${group.section}`;
+  const items = group.garments
+    .map((id) => {
+      const { label, note } = GARMENTS[id] ?? { label: id };
+      return `<li class="clothing-chip">${icon(GARMENTS[id] ? id : 'unknown')}<span>${escapeHtml(label)}${note ? ` <span class="muted">${escapeHtml(note)}</span>` : ''}</span></li>`;
     })
     .join('');
   return `
     <div class="clothing-row">
       <div class="layer-head">
-        <span class="layer-name" id="${labelId}">${escapeHtml(copy.zones[zone.id])}</span>
-        <span class="layer-hint">${escapeHtml(zoneHint(zone, daySummary))}</span>
+        <span class="layer-name" id="${labelId}">${escapeHtml(copy.sections[group.section])}</span>
+        <span class="layer-hint">${escapeHtml(sectionHint(group, daySummary))}</span>
       </div>
       <ul class="garment-list layer-items" aria-labelledby="${labelId}">${items}</ul>
     </div>`;
@@ -120,7 +85,7 @@ export function renderRecommendationCard({ outfit, recommendation, daySummary, w
       ${addOns}
       <div class="outfit-body">
         <div class="clothing-stack" role="group" aria-label="${escapeHtml(copy.garmentListLabel)}">
-          ${groupGarments(outfit.garments).map((zone) => renderZone(zone, daySummary)).join('')}
+          ${groupBySection(outfit.garments).map((group) => renderSection(group, daySummary)).join('')}
         </div>
         ${renderOutfitIllustration(outfit)}
       </div>

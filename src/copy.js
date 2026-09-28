@@ -33,26 +33,28 @@ export const copy = {
   putOnToday: 'Put on today',
   outfitPending: 'Your outfit recommendation appears once the forecast has loaded.',
   garmentListLabel: 'Garments to put on',
-  zones: {
+  sections: {
     head: 'Head',
-    top: 'Top',
-    legs: 'Legs',
-    feet: 'Feet',
+    middle: 'Body',
+    low: 'Legs',
+    bottom: 'Feet',
     carry: 'Carry'
   },
-  zoneHints: {
+  sectionHints: {
     headCold: (temp) => `Down to ${temp}°`,
+    sun: 'Sun protection',
     layers: (count) => (count === 1 ? 'One layer' : `${count} layers`),
     peelOff: 'Peel off later',
     long: 'Long today',
     short: 'Short today',
     rainReady: 'Rain-ready',
+    snowReady: 'Snow-ready',
     closed: 'Dry & cozy',
     open: 'Airy & light',
     carry: 'Just in case'
   },
-  garmentNotes: { 'Waterproof shoes': '(water shoes)' },
   reasonsLabel: 'Why this outfit',
+  illustrationBody: 'Child figure',
   illustrationCaption: (label) => `Illustration: ${label} outfit`,
   illustrationLabel: (label, garments) => `Illustration: ${label} outfit — ${garments.join(', ')}`,
   decisionDetails: 'View decision details',

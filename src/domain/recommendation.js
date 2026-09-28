@@ -16,6 +16,8 @@ export const DEFAULTS = Object.freeze({
   rainProbabilityThreshold: 50,
   rainAmountThresholdMm: 0.3,
   coldRainMaximumApparentC: 12,
+  freezingMaximumApparentC: 0,
+  heavyRainTotalMm: 5,
   cacheMinutes: 15
 });
 
@@ -123,15 +125,23 @@ function chooseDryBase(summary, defaults) {
   return 'cold-dry';
 }
 
+// Rules in order, first match wins: freezing beats rain, heavy rain beats
+// temperature, then rain splits on cold, then the dry outfits.
+function chooseOutfitId(summary, defaults) {
+  if (summary.minApparentC < defaults.freezingMaximumApparentC) return 'super-cold';
+  if (summary.rainLikely) {
+    if (summary.precipitationTotalMm >= defaults.heavyRainTotalMm) return 'super-rain';
+    return summary.minApparentC < defaults.coldRainMaximumApparentC ? 'cold-rain' : 'hot-rain';
+  }
+  return chooseDryBase(summary, defaults);
+}
+
 export function addOnsForOutfit(outfit, summary) {
-  return summary.rainLikely && !outfit.tags.includes('rain') ? ['rain-gear'] : [];
+  return summary.rainLikely && !outfit.tags.includes('waterproof') ? ['rain-gear'] : [];
 }
 
 export function recommendOutfit(summary, defaults = DEFAULTS, outfits = OUTFITS) {
-  const outfitId =
-    summary.rainLikely && summary.minApparentC < defaults.coldRainMaximumApparentC
-      ? 'cold-rain'
-      : chooseDryBase(summary, defaults);
+  const outfitId = chooseOutfitId(summary, defaults);
   const outfit = getOutfitById(outfitId, outfits);
   return {
     source: 'rules',
