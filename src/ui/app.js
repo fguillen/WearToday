@@ -5,6 +5,7 @@ import { DEFAULTS, deriveDaySummary, recommendOutfit } from '../domain/recommend
 import { loadBerlinForecast, readCachedForecast } from '../services/weather-service.js';
 import { drawHourlyChart, renderHourlyTable } from './hourly-chart.js';
 import { escapeHtml } from './html.js';
+import { icon, weatherIcon } from './icons.js';
 import { renderRecommendationCard } from './recommendation-card.js';
 import { renderStatusBanner, renderWeatherError } from './status-banner.js';
 
@@ -22,57 +23,91 @@ export function createInitialState() {
 
 function renderShell() {
   return `
-    <header class="site-header">
-      <div>
-        <p class="brand">${escapeHtml(copy.brand)}</p>
-        <p class="header-meta" id="header-meta">${escapeHtml(copy.locationLabel)}</p>
+    <header class="hero">
+      <div class="hero-top">
+        <p class="app-title">${escapeHtml(copy.brand)}</p>
+        <button type="button" id="refresh-button" class="button button-glass" data-action="refresh">${icon('refresh')}<span id="refresh-label">${escapeHtml(copy.refresh)}</span></button>
       </div>
-      <button type="button" id="refresh-button" class="button" data-action="refresh">${escapeHtml(copy.refresh)}</button>
+      <section id="snapshot" class="snapshot" aria-labelledby="today-heading"></section>
     </header>
-    <div id="status-banner"></div>
-    <main id="main" class="layout">
-      <section id="snapshot" class="card snapshot" aria-labelledby="today-heading"></section>
-      <section id="outfit" class="card outfit-card" aria-labelledby="outfit-heading"></section>
-      <section id="forecast" class="card forecast-card" aria-labelledby="forecast-heading"></section>
-      <section id="tips" class="card tips" aria-labelledby="tips-heading">
-        <h2 id="tips-heading">${escapeHtml(copy.tipsHeading)}</h2>
-        <p>${escapeHtml(copy.tipsText)}</p>
+    <div id="status-banner" class="banner-slot"></div>
+    <main id="main" class="main-content">
+      <section id="outfit" class="outfit-section" aria-labelledby="outfit-heading"></section>
+      <section id="forecast" class="forecast-section" aria-labelledby="forecast-heading"></section>
+      <section id="tips" class="reassurance-note" aria-labelledby="tips-heading">
+        ${icon('heart')}
+        <div>
+          <h2 id="tips-heading">${escapeHtml(copy.tipsHeading)}</h2>
+          <p>${escapeHtml(copy.tipsText)}</p>
+        </div>
       </section>
     </main>
     <footer class="site-footer"><p>${escapeHtml(copy.footer)}</p></footer>
     <div id="announcer" class="visually-hidden" aria-live="polite"></div>`;
 }
 
+function headerMeta(weather) {
+  const meta = weather.data
+    ? `${copy.locationLabel} · ${copy.updatedAt(formatters.clockTime(weather.data.fetchedAt))}`
+    : copy.locationLabel;
+  return `<p class="location" id="header-meta">${escapeHtml(meta)}</p>`;
+}
+
+function pill(className, iconName, iconClass, text) {
+  return `<li class="${className}">${icon(iconName, iconClass)}${escapeHtml(text)}</li>`;
+}
+
+// High/low come from the daily forecast; the alerts from the hours still ahead.
+function renderHeroPills(forecast, daySummary) {
+  const temps = dayHours(forecast).map((hour) => hour.temperatureC).filter(Number.isFinite);
+  const high = forecast.day.highC ?? (temps.length ? Math.max(...temps) : null);
+  const low = forecast.day.lowC ?? (temps.length ? Math.min(...temps) : null);
+  const range = [
+    high !== null && pill('range-pill', 'arrowUp', 'icon-high', copy.high(formatters.temperature(high))),
+    low !== null && pill('range-pill', 'arrowDown', 'icon-low', copy.low(formatters.temperature(low)))
+  ].filter(Boolean);
+
+  const alerts = [];
+  if (daySummary?.rainLikely && daySummary.maxRainProbability > 0) {
+    const when = copy.timeOfDay(daySummary.firstRainHour ?? DEFAULTS.dayStartHour);
+    alerts.push(pill('alert-pill', 'umbrellaRain', 'icon-rain', copy.alertRain(daySummary.maxRainProbability, when)));
+  }
+  if (daySummary) {
+    const temp = formatters.temperature(daySummary.maxApparentC);
+    alerts.push(pill('alert-pill', 'sun', 'icon-sun', copy.alertWarmest(temp, formatters.hourLabel(daySummary.warmestHour))));
+  }
+
+  return `
+    ${range.length ? `<ul class="temp-range">${range.join('')}</ul>` : ''}
+    ${alerts.length ? `<ul class="weather-alerts">${alerts.join('')}</ul>` : ''}`;
+}
+
 function renderSnapshot(weather, daySummary) {
   if (weather.data) {
     const now = currentConditions(weather.data);
+    const meta = getWeatherMeta(now.weatherCode);
+    const temperature = formatters.temperature(now.temperatureC ?? now.apparentTemperatureC);
+    const feels = formatters.temperature(now.apparentTemperatureC ?? now.temperatureC);
     return `
-      <h2 id="today-heading">${escapeHtml(copy.todayHeading(formatters.dayHeading(weather.data.day.date)))}</h2>
-      <p class="now-line">${escapeHtml(
-        copy.nowLine({
-          temperature: formatters.temperature(now.temperatureC),
-          feelsLike: formatters.temperature(now.apparentTemperatureC ?? now.temperatureC),
-          condition: getWeatherMeta(now.weatherCode).label
-        })
-      )}</p>
-      <p class="muted">${escapeHtml(
-        copy.windowNote(
-          formatters.hourLabel(DEFAULTS.dayStartHour),
-          formatters.hourLabel(DEFAULTS.dayEndHour),
-          daySummary?.window.start ?? formatters.hourLabel(DEFAULTS.dayStartHour)
-        )
-      )}</p>`;
+      <h2 id="today-heading" class="today-heading">${escapeHtml(copy.todayHeading(formatters.dayHeading(weather.data.day.date)))}</h2>
+      <div class="current-weather">
+        <p class="temp-main"><span class="visually-hidden">${escapeHtml(copy.temperatureNow(temperature))}</span><span aria-hidden="true">${escapeHtml(temperature)}<span class="deg">°</span></span></p>
+        <p class="temp-details">${weatherIcon(meta.icon)}${escapeHtml(copy.feelsLine(feels, meta.label))}</p>
+        ${headerMeta(weather)}
+        ${renderHeroPills(weather.data, daySummary)}
+      </div>`;
   }
-  if (weather.status === 'error') return renderWeatherError(weather);
+  if (weather.status === 'error') return `${renderWeatherError(weather)}${headerMeta(weather)}`;
   return `
     <h2 id="today-heading" class="visually-hidden">${escapeHtml(copy.todayHeading(''))}</h2>
     <p class="loading" role="status">${escapeHtml(copy.loadingForecast)}</p>
-    <div class="skeleton skeleton-line" aria-hidden="true"></div>
-    <div class="skeleton skeleton-line short" aria-hidden="true"></div>`;
+    <div class="skeleton skeleton-temp" aria-hidden="true"></div>
+    <div class="skeleton skeleton-line short" aria-hidden="true"></div>
+    ${headerMeta(weather)}`;
 }
 
-function renderForecastSection(weather, currentIndex) {
-  const heading = `<h2 id="forecast-heading">${escapeHtml(copy.forecastHeading)}</h2>`;
+function renderForecastSection(weather, daySummary, currentIndex) {
+  const heading = `<h2 id="forecast-heading" class="section-title">${escapeHtml(copy.forecastHeading)}</h2>`;
   if (!weather.data) {
     return weather.status === 'error'
       ? heading
@@ -83,20 +118,26 @@ function renderForecastSection(weather, currentIndex) {
     ? `<li><span class="swatch swatch-past" aria-hidden="true"></span>${escapeHtml(copy.legendPast)}</li>
       <li><span class="swatch swatch-now" aria-hidden="true"></span>${escapeHtml(copy.legendNow(formatters.localHourLabel(hours[currentIndex].time)))}</li>`
     : '';
+  const note = copy.windowNote(
+    formatters.hourLabel(DEFAULTS.dayStartHour),
+    formatters.hourLabel(DEFAULTS.dayEndHour),
+    daySummary?.window.start ?? formatters.hourLabel(DEFAULTS.dayStartHour)
+  );
   return `
     ${heading}
-    <h3 id="chart-title" class="chart-title">${escapeHtml(copy.chartTitle)}</h3>
-    <div class="chart-wrap" id="chart-wrap">
-      <canvas id="hourly-chart" role="img" aria-labelledby="chart-title" aria-describedby="chart-alt"></canvas>
-    </div>
-    <p id="chart-alt" class="visually-hidden">${escapeHtml(copy.chartAlt)}</p>
+    <p class="section-note" id="window-note">${escapeHtml(note)}</p>
+    <h3 id="chart-title" class="visually-hidden">${escapeHtml(copy.chartTitle)}</h3>
     <ul class="legend">
       <li><span class="swatch swatch-line" aria-hidden="true"></span>${escapeHtml(copy.legendTemperature)}</li>
       <li><span class="swatch swatch-bar" aria-hidden="true"></span>${escapeHtml(copy.legendRain)}</li>
       ${nowLegend}
     </ul>
+    <div class="chart-container" id="chart-wrap">
+      <canvas id="hourly-chart" role="img" aria-labelledby="chart-title" aria-describedby="chart-alt"></canvas>
+    </div>
+    <p id="chart-alt" class="visually-hidden">${escapeHtml(copy.chartAlt)}</p>
     <p class="chart-unavailable muted" id="chart-unavailable" hidden>${escapeHtml(copy.chartUnavailable)}</p>
-    <details class="table-details" id="hourly-table-details">
+    <details class="disclosure table-details" id="hourly-table-details">
       <summary>${escapeHtml(copy.tableSummary)}</summary>
       ${renderHourlyTable(hours, { currentIndex })}
     </details>`;
@@ -124,8 +165,8 @@ export function createApp(root, deps = {}) {
 
   root.innerHTML = renderShell();
   const el = {
-    headerMeta: root.querySelector('#header-meta'),
     refresh: root.querySelector('#refresh-button'),
+    refreshLabel: root.querySelector('#refresh-label'),
     banner: root.querySelector('#status-banner'),
     main: root.querySelector('#main'),
     snapshot: root.querySelector('#snapshot'),
@@ -169,10 +210,7 @@ export function createApp(root, deps = {}) {
 
   function render() {
     const { weather } = state;
-    el.headerMeta.textContent = weather.data
-      ? `${copy.locationLabel} · ${copy.updatedAt(formatters.clockTime(weather.data.fetchedAt))}`
-      : copy.locationLabel;
-    el.refresh.textContent = weather.status === 'loading' && weather.data ? copy.refreshing : copy.refresh;
+    el.refreshLabel.textContent = weather.status === 'loading' && weather.data ? copy.refreshing : copy.refresh;
     el.main.setAttribute('aria-busy', String(weather.status === 'loading'));
 
     preservingFocus(() => {
@@ -192,7 +230,7 @@ export function createApp(root, deps = {}) {
       // The chart only changes with new forecast data or a new hour.
       const nowIndex = currentIndex();
       if (weather.data !== renderedForecastData || nowIndex !== renderedCurrentIndex || !weather.data) {
-        el.forecast.innerHTML = renderForecastSection(weather, nowIndex);
+        el.forecast.innerHTML = renderForecastSection(weather, state.daySummary, nowIndex);
         renderedForecastData = weather.data;
         renderedCurrentIndex = nowIndex;
         if (weather.data) paintChart();
@@ -283,6 +321,8 @@ export function createApp(root, deps = {}) {
 
   root.addEventListener('click', onClick);
   win.addEventListener('resize', onResize);
+  // Canvas text does not reflow: redraw once the web fonts have arrived.
+  doc.fonts?.ready?.then(onResize);
 
   return {
     start() {

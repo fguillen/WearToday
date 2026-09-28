@@ -445,32 +445,30 @@ Use an `unknown` fallback for unmapped codes so an API update cannot break the U
 
 ### 7.1 Visual direction
 
-Create a warm, calm, modern interface for a busy parent. It should be playful enough to feel child-adjacent but not cartoonish or cluttered.
+Create a warm, calm, modern interface for a busy parent. It should be playful enough to feel child-adjacent but not cartoonish or cluttered. The reference design is `docs/template/index.html`: a sky-blue hero with rounded bottom corners, warm brown ink, cream cards, pill chips and a yellow accent.
 
 **Design tokens:**
 
 ```css
 :root {
-  --ink: #1E293B;
-  --muted-ink: #5B6473;
-  --paper: #F8FAFC;
-  --card: #FFFFFF;
-  --line: #E2E8F0;
-  --sun: #FBBF24;
-  --sky: #60A5FA;
-  --rain: #4F7FE6;
-  --leaf: #2E8B73;
-  --warm: #F97316;
+  --clr-text: #4A3320;          /* ink, chart line */
+  --clr-muted: #765F4D;         /* AA on white and cream */
+  --clr-accent: #F4CE6A;        /* "Before you go" note, current hour */
+  --clr-accent-strong: #E8A200; /* sun glyphs, chip icons */
+  --clr-surface: #F7F3EE;       /* outfit card, past hours */
+  --clr-sky: #A8D7E8;           /* hero, rain bars */
+  --clr-sky-strong: #4A90B8;    /* rain glyphs */
+  --clr-bg: #FFFFFF;
+  --clr-border: rgb(74 51 32 / 0.08);
   --danger: #B42318;
-  --focus: #1D4ED8;
-  --radius-card: 24px;
-  --shadow-card: 0 12px 28px rgb(15 23 42 / 0.08);
+  --focus: #4A3320;
+  --radius-xl: 32px; --radius-lg: 24px; --radius-md: 16px; --radius-pill: 999px;
 }
 ```
 
-- Use a system sans-serif stack, 16px minimum body size, 44px minimum touch targets.
+- Headings in **Outfit**, body in **Plus Jakarta Sans**, both self-hosted through `@fontsource` packages and bundled by Vite; system sans-serif fallback. 44px minimum touch targets.
 - Prefer text labels plus icons; never rely on color alone.
-- No external web fonts, remote icon kits, or image CDNs.
+- No remote web fonts, remote icon kits, or image CDNs.
 - Respect `prefers-reduced-motion` and use no auto-playing animation.
 
 ### 7.2 Page structure
@@ -516,9 +514,7 @@ Create a warm, calm, modern interface for a busy parent. It should be playful en
 </footer>
 ```
 
-**Desktop:** a two-column main grid where the outfit card is left and weather/chart card is right.
-
-**Mobile (< 760px):** one column in the exact order above. The recommendation card must be first after the snapshot. The graphic must be clearly readable without pinch zoom.
+**All widths:** one centred column, at most 600px wide, in the order above. The snapshot lives in the sky-blue hero together with the brand and Refresh button: big current temperature, “Feels like … · condition”, `Berlin · Updated …`, High/Low pills, and alert pills for the hours still ahead (rain chance when rain is likely, warmest hour). The reason chips sit directly above the outfit card. The hour-by-hour section carries the “We track the whole day…” note. The graphic must be clearly readable without pinch zoom.
 
 ### 7.3 Recommendation card
 
@@ -526,7 +522,7 @@ The recommendation card is the visual focal point.
 
 - Header: `PUT ON TODAY` in small uppercase letter spacing; then friendly outfit name.
 - Illustration: a neutral, simple child silhouette with layered SVG elements. Each `visualLayer` in the catalog maps to an SVG `<g>` with meaningful `aria-label` text and a distinct garment color/shape.
-- Garment checklist: 1–2 column responsive list. Each line has a simple inline SVG garment marker and text.
+- Garment checklist: garments grouped into rows by body zone (Head, Top, Legs, Feet, Carry) with a short hint per zone; each garment is a white pill with an inline SVG garment icon and text.
 - Reason chips: maximum three, generated from `daySummary.reasons`. Examples:
   - `Feels like 7°C in the morning`
   - `Rain likely in the afternoon`

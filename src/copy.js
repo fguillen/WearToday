@@ -17,8 +17,12 @@ export const copy = {
 
   // Snapshot
   todayHeading: (dateLabel) => `Today in Berlin · ${dateLabel}`,
-  nowLine: ({ temperature, feelsLike, condition }) =>
-    `${temperature}°C now · feels like ${feelsLike}°C · ${condition}`,
+  feelsLine: (feelsLike, condition) => `Feels like ${feelsLike}° · ${condition}`,
+  temperatureNow: (temperature) => `${temperature}°C now`,
+  high: (temp) => `High ${temp}°`,
+  low: (temp) => `Low ${temp}°`,
+  alertRain: (percent, when) => `${percent}% rain ${when}`,
+  alertWarmest: (temp, time) => `Warmest ${temp}° at ${time}`,
   windowNote: (start, end, from) => `We track the whole day, ${start}–${end}, hour by hour. The outfit covers ${from}–${end}.`,
   staleNotice: 'Showing a saved forecast. It may be out of date.',
   weatherErrorTitle: 'Forecast unavailable',
@@ -29,6 +33,24 @@ export const copy = {
   putOnToday: 'Put on today',
   outfitPending: 'Your outfit recommendation appears once the forecast has loaded.',
   garmentListLabel: 'Garments to put on',
+  zones: {
+    head: 'Head',
+    top: 'Top',
+    legs: 'Legs',
+    feet: 'Feet',
+    carry: 'Carry'
+  },
+  zoneHints: {
+    headCold: (temp) => `Down to ${temp}°`,
+    layers: (count) => (count === 1 ? 'One layer' : `${count} layers`),
+    peelOff: 'Peel off later',
+    long: 'Long today',
+    short: 'Short today',
+    rainReady: 'Rain-ready',
+    closed: 'Dry & cozy',
+    open: 'Airy & light',
+    carry: 'Just in case'
+  },
   garmentNotes: { 'Waterproof shoes': '(water shoes)' },
   reasonsLabel: 'Why this outfit',
   illustrationCaption: (label) => `Illustration: ${label} outfit`,
@@ -63,10 +85,10 @@ export const copy = {
   forecastHeading: 'Today, hour by hour',
   chartTitle: 'Hourly forecast — apparent temperature and rain chance',
   chartAlt: 'Chart of feels-like temperature and chance of rain per hour. The same data is in the table below.',
-  legendTemperature: 'Line: feels-like temperature (°C, left axis)',
-  legendRain: 'Bars: chance of rain (%, right axis)',
-  legendPast: 'Grey: hours already passed',
-  legendNow: (time) => `Green column: now (${time})`,
+  legendTemperature: 'Feels like °C',
+  legendRain: 'Rain chance %',
+  legendPast: 'Past hours',
+  legendNow: (time) => `Now ${time}`,
   nowMarker: 'Now',
   chartUnavailable: 'The chart could not be drawn on this device. The table below shows the same forecast.',
   tableSummary: 'View the hourly forecast as a table',
@@ -74,7 +96,7 @@ export const copy = {
   tableColumns: ['Time', 'Feels like', 'Rain chance', 'Condition', 'Wind'],
 
   // Tips + footer
-  tipsHeading: 'Before you go',
+  tipsHeading: 'Before you go…',
   tipsText: 'Forecasts can change. Consider your child’s comfort, activity, and kindergarten rules.',
   footer: 'Weather data: Open-Meteo / DWD (CC BY 4.0) · Forecasts are estimates',
 

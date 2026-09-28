@@ -41,6 +41,7 @@ const LAYER_LABELS = {
 // Figure geometry (viewBox 0 0 240 280): head centred at x=110.
 const SKIN = '#E9C9A8';
 const SKIN_LINE = '#C9A080';
+const FACE = '#4A3320';
 
 const torso = (fill, { top = 84, bottom = 158, inset = 0 } = {}) =>
   `<rect x="${82 + inset}" y="${top}" width="${56 - inset * 2}" height="${bottom - top}" rx="10" fill="${fill}"/>`;
@@ -51,8 +52,8 @@ const longSleeves = (fill, width = 14) =>
 const LAYERS = {
   body: () => `
     <circle cx="110" cy="54" r="26" fill="${SKIN}" stroke="${SKIN_LINE}"/>
-    <circle cx="101" cy="52" r="2.5" fill="#1E293B"/><circle cx="119" cy="52" r="2.5" fill="#1E293B"/>
-    <path d="M102 63 q8 6 16 0" fill="none" stroke="#1E293B" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="101" cy="52" r="2.5" fill="${FACE}"/><circle cx="119" cy="52" r="2.5" fill="${FACE}"/>
+    <path d="M102 63 q8 6 16 0" fill="none" stroke="${FACE}" stroke-width="2" stroke-linecap="round"/>
     <rect x="103" y="78" width="14" height="10" fill="${SKIN}"/>
     <rect x="82" y="84" width="56" height="74" rx="10" fill="${SKIN}" stroke="${SKIN_LINE}"/>
     <rect x="68" y="88" width="12" height="70" rx="6" fill="${SKIN}" stroke="${SKIN_LINE}"/>
@@ -107,17 +108,17 @@ const LAYERS = {
     <circle cx="110" cy="21" r="6" fill="#DDD6FE"/>`,
   umbrella: () => `
     <path d="M160 70 q30 -44 64 0 q-8 -7 -16 0 q-8 -7 -16 0 q-8 -7 -16 0 q-8 -7 -16 0 z" fill="#4F7FE6"/>
-    <path d="M192 70 v82 q0 8 -8 8 q-8 0 -8 -8" fill="none" stroke="#1E293B" stroke-width="3" stroke-linecap="round"/>`
+    <path d="M192 70 v82 q0 8 -8 8 q-8 0 -8 -8" fill="none" stroke="${FACE}" stroke-width="3" stroke-linecap="round"/>`
 };
 
 function backdrop(tags) {
-  const sun = '<circle cx="34" cy="34" r="14" fill="#FBBF24"/>';
-  const cloud = (x, y, fill = '#CBD5E1') =>
+  const sun = '<circle cx="34" cy="34" r="14" fill="#F4CE6A"/>';
+  const cloud = (x, y, fill = '#D3E6EE') =>
     `<g fill="${fill}"><circle cx="${x}" cy="${y}" r="10"/><circle cx="${x + 12}" cy="${y - 5}" r="12"/><circle cx="${x + 24}" cy="${y}" r="10"/><rect x="${x}" y="${y}" width="24" height="10"/></g>`;
-  const drops = '<path d="M22 64 l-3 8 M34 64 l-3 8 M46 64 l-3 8" stroke="#4F7FE6" stroke-width="3" stroke-linecap="round"/>';
+  const drops = '<path d="M22 64 l-3 8 M34 64 l-3 8 M46 64 l-3 8" stroke="#4A90B8" stroke-width="3" stroke-linecap="round"/>';
 
   let art;
-  if (tags.includes('rain')) art = cloud(18, 48, '#94A3B8') + drops;
+  if (tags.includes('rain')) art = cloud(18, 48, '#A8C3CF') + drops;
   else if (tags.includes('sunny')) art = sun;
   else if (tags.includes('cold')) art = cloud(18, 44);
   else art = sun + cloud(26, 50);
@@ -144,36 +145,4 @@ export function renderOutfitIllustration(outfit) {
       </svg>
       <figcaption class="illustration-caption">${escapeHtml(copy.illustrationCaption(outfit.label))}</figcaption>
     </figure>`;
-}
-
-// Tiny garment markers for the checklist.
-const MARKERS = {
-  top: '<path d="M6 3 l-4 4 3 3 1-1 v9 h12 v-9 l1 1 3-3 -4-4 h-3 a3 3 0 0 1 -6 0 z"/>',
-  bottom: '<path d="M5 3 h12 l1 17 h-5 l-2-10 -2 10 h-5 z"/>',
-  feet: '<path d="M3 11 h8 l2 3 h6 a2 2 0 0 1 0 5 h-16 z"/>',
-  head: '<path d="M4 15 a7 7 0 0 1 14 0 z M2 15 h18 v3 h-18 z"/>',
-  neck: '<path d="M3 6 h16 v5 h-5 v9 h-4 v-9 h-7 z"/>',
-  umbrella: '<path d="M2 11 a9 8 0 0 1 18 0 z M11 11 v7 a2 2 0 0 1 -4 0" />'
-};
-
-const GARMENT_MARKERS = {
-  'Short-sleeve T-shirt': 'top',
-  'Long-sleeve T-shirt': 'top',
-  Sweater: 'top',
-  Jacket: 'top',
-  Shorts: 'bottom',
-  'Long pants': 'bottom',
-  'Rain pants': 'bottom',
-  Socks: 'feet',
-  Sandals: 'feet',
-  'Closed shoes': 'feet',
-  'Waterproof shoes': 'feet',
-  Hat: 'head',
-  Scarf: 'neck',
-  Umbrella: 'umbrella'
-};
-
-export function renderGarmentMarker(garment) {
-  const marker = MARKERS[GARMENT_MARKERS[garment]] ?? '<circle cx="11" cy="11" r="6"/>';
-  return `<svg class="garment-marker" viewBox="0 0 22 22" aria-hidden="true" focusable="false">${marker}</svg>`;
 }

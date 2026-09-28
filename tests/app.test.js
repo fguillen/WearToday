@@ -41,6 +41,21 @@ describe('app', () => {
     expect(root.querySelectorAll('.hourly-table tbody tr')).toHaveLength(16);
     expect(drawChart.mock.calls[0][1]).toHaveLength(16);
     expect($('.snapshot').textContent).not.toMatch(/kindergarten/i);
+    // Hero: daily high/low plus rain and warmest-hour alerts for the hours ahead.
+    const pills = [...root.querySelectorAll('.temp-range li, .weather-alerts li')].map((li) => li.textContent);
+    expect(pills).toEqual(['High 16°', 'Low 8°', '70% rain in the afternoon', 'Warmest 14° at 22:00']);
+    // Garments grouped by body zone, in dressing order.
+    const zones = [...root.querySelectorAll('.clothing-row')].map((row) => ({
+      zone: row.querySelector('.layer-name').textContent,
+      garments: [...row.querySelectorAll('.clothing-chip')].map((chip) => chip.textContent.trim())
+    }));
+    expect(zones).toEqual([
+      { zone: 'Head', garments: ['Hat', 'Scarf'] },
+      { zone: 'Top', garments: ['Long-sleeve T-shirt', 'Sweater', 'Jacket'] },
+      { zone: 'Legs', garments: ['Long pants', 'Rain pants'] },
+      { zone: 'Feet', garments: ['Socks', 'Waterproof shoes (water shoes)'] },
+      { zone: 'Carry', garments: ['Umbrella'] }
+    ]);
     expect($('svg[role="img"]').getAttribute('aria-label')).toMatch(/^Illustration: Cold & rainy outfit/);
     expect(root.querySelectorAll('svg [data-layer]').length).toBe(11);
     expect($('#main').getAttribute('aria-busy')).toBe('false');
@@ -121,7 +136,7 @@ describe('app', () => {
     expect($('.legend').textContent).toContain(copy.legendNow('09:00'));
     // The outfit only covers the hours still ahead.
     expect($('#decision-details').textContent).toContain('Checked 09:00–22:00 (14 hours).');
-    expect($('.snapshot').textContent).toContain('The outfit covers 09:00–22:00.');
+    expect($('#window-note').textContent).toContain('The outfit covers 09:00–22:00.');
   });
 
   it('does not mark any hour when the forecast is for another day', async () => {

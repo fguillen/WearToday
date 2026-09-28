@@ -76,6 +76,7 @@ export function deriveDaySummary(forecast, defaults = DEFAULTS, { fromHour = def
     minApparentC,
     maxApparentC,
     coldestHour: coldest.hour,
+    warmestHour: warmest.hour,
     rainLikely,
     firstRainHour: firstRainHour?.hour ?? null,
     maxRainProbability,

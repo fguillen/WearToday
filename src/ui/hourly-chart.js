@@ -4,8 +4,10 @@ import { escapeHtml } from './html.js';
 
 // Canvas 2D chart plus an accessible table built from the same hours.
 
-const PADDING = { top: 34, right: 40, bottom: 48, left: 38 };
+const PADDING = { top: 36, right: 38, bottom: 48, left: 34 };
 const GLYPH_WIDTH_PX = 26;
+const FONT_FAMILY = '"Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif';
+const font = (weight, size) => `${weight} ${size}px ${FONT_FAMILY}`;
 
 export function computeTemperatureScale(values) {
   const finite = values.filter(Number.isFinite);
@@ -26,21 +28,24 @@ function readColors(element) {
   const styles = globalThis.getComputedStyle?.(element);
   const token = (name, fallback) => styles?.getPropertyValue(name).trim() || fallback;
   return {
-    ink: token('--ink', '#1E293B'),
-    muted: token('--muted-ink', '#5B6473'),
-    line: token('--line', '#E2E8F0'),
-    temperature: token('--warm', '#F97316'),
-    rain: token('--rain', '#4F7FE6'),
-    sun: token('--sun', '#FBBF24'),
-    now: token('--leaf-strong', '#1F6F5C'),
-    nowBand: 'rgba(46, 139, 115, 0.16)',
-    pastBand: 'rgba(100, 116, 139, 0.10)',
-    card: token('--card', '#FFFFFF')
+    ink: token('--clr-text', '#4A3320'),
+    muted: token('--clr-muted', '#765F4D'),
+    line: token('--clr-grid', '#EFE8E0'),
+    temperature: token('--clr-text', '#4A3320'),
+    rainBar: token('--clr-sky', '#A8D7E8'),
+    rain: token('--clr-sky-strong', '#4A90B8'),
+    sun: token('--clr-accent-strong', '#E8A200'),
+    now: token('--clr-accent', '#F4CE6A'),
+    nowBand: 'rgba(244, 206, 106, 0.32)',
+    pastBand: token('--clr-surface', '#F7F3EE'),
+    cloud: '#AFC3CD',
+    cloudLight: '#D3E2E9',
+    card: token('--clr-bg', '#FFFFFF')
   };
 }
 
 function drawGlyph(ctx, icon, x, y, colors) {
-  const cloud = (fill = '#94A3B8') => {
+  const cloud = (fill = colors.cloud) => {
     ctx.fillStyle = fill;
     ctx.beginPath();
     ctx.arc(x - 5, y + 1, 5, 0, Math.PI * 2);
@@ -70,13 +75,13 @@ function drawGlyph(ctx, icon, x, y, colors) {
   switch (icon) {
     case 'sun': sun(); break;
     case 'sun-cloud':
-    case 'cloud-sun': sun(-4, -3, 5); cloud('#CBD5E1'); break;
+    case 'cloud-sun': sun(-4, -3, 5); cloud(colors.cloudLight); break;
     case 'cloud': cloud(); break;
-    case 'fog': cloud('#CBD5E1'); strokes(colors.muted, [2, 2]); break;
+    case 'fog': cloud(colors.cloudLight); strokes(colors.muted, [2, 2]); break;
     case 'drizzle': cloud(); strokes(colors.rain, [2, 2]); break;
     case 'rain': cloud(); strokes(colors.rain, []); break;
     case 'snow': cloud(); strokes(colors.muted, [1, 3]); break;
-    case 'storm': cloud('#64748B'); strokes(colors.sun, []); break;
+    case 'storm': cloud(colors.muted); strokes(colors.sun, []); break;
     default:
       ctx.fillStyle = colors.muted;
       ctx.fillText('?', x, y + 4);
@@ -120,10 +125,10 @@ export function drawHourlyChart(canvas, hours, { currentIndex = -1 } = {}) {
   const yTemp = (value) => plot.bottom - ((value - scale.min) / (scale.max - scale.min)) * (plot.bottom - plot.top);
   const yRain = (percent) => plot.bottom - (percent / 100) * (plot.bottom - plot.top);
 
-  ctx.font = '12px system-ui, -apple-system, "Segoe UI", sans-serif';
+  ctx.font = font(600, 11);
   ctx.textBaseline = 'middle';
 
-  // Past hours in grey, the current hour as a full-height green column.
+  // Past hours on a cream band, the current hour as a full-height yellow column.
   if (currentIndex > 0) {
     ctx.fillStyle = colors.pastBand;
     ctx.fillRect(plot.left, 0, slot * currentIndex, plot.bottom);
@@ -152,21 +157,22 @@ export function drawHourlyChart(canvas, hours, { currentIndex = -1 } = {}) {
   for (const percent of [0, 50, 100]) ctx.fillText(`${percent}%`, plot.right + 6, yRain(percent));
 
   // Rain bars.
-  ctx.fillStyle = colors.rain;
-  ctx.globalAlpha = 0.35;
-  const barWidth = Math.max(4, slot * 0.55);
+  ctx.fillStyle = colors.rainBar;
+  const barWidth = Math.max(4, Math.min(14, slot * 0.5));
   hours.forEach((hour, index) => {
     const percent = hour.precipitationProbabilityPercent ?? 0;
     if (percent <= 0) return;
     const top = yRain(percent);
-    ctx.fillRect(xCenter(index) - barWidth / 2, top, barWidth, plot.bottom - top);
+    const barHeight = plot.bottom - top;
+    roundedRect(ctx, xCenter(index) - barWidth / 2, top, barWidth, barHeight, Math.min(3, barHeight / 2, barWidth / 2));
+    ctx.fill();
   });
-  ctx.globalAlpha = 1;
 
   // Feels-like line.
   ctx.strokeStyle = colors.temperature;
-  ctx.lineWidth = 2.5;
+  ctx.lineWidth = 3;
   ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
   ctx.beginPath();
   let started = false;
   temps.forEach((value, index) => {
@@ -178,25 +184,25 @@ export function drawHourlyChart(canvas, hours, { currentIndex = -1 } = {}) {
     started = true;
   });
   ctx.stroke();
-  ctx.fillStyle = colors.temperature;
+  ctx.fillStyle = colors.card;
+  ctx.lineWidth = 2;
   temps.forEach((value, index) => {
     if (!Number.isFinite(value)) return;
     ctx.beginPath();
-    ctx.arc(xCenter(index), yTemp(value), 3.5, 0, Math.PI * 2);
+    ctx.arc(xCenter(index), yTemp(value), 3, 0, Math.PI * 2);
     ctx.fill();
+    ctx.stroke();
   });
 
-  // Current hour: a larger ringed dot on the line.
+  // Current hour: a larger yellow dot ringed in the line colour.
   const nowTemp = temps[currentIndex];
   if (Number.isFinite(nowTemp)) {
-    ctx.fillStyle = colors.card;
-    ctx.beginPath();
-    ctx.arc(xCenter(currentIndex), yTemp(nowTemp), 7, 0, Math.PI * 2);
-    ctx.fill();
     ctx.fillStyle = colors.now;
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.arc(xCenter(currentIndex), yTemp(nowTemp), 5, 0, Math.PI * 2);
+    ctx.arc(xCenter(currentIndex), yTemp(nowTemp), 6, 0, Math.PI * 2);
     ctx.fill();
+    ctx.stroke();
   }
 
   // X labels + weather glyphs, thinned out on narrow screens. The current
@@ -209,7 +215,7 @@ export function drawHourlyChart(canvas, hours, { currentIndex = -1 } = {}) {
     const isNow = index === currentIndex;
     if (isNow || (index % labelEvery === 0 && !near(index, labelEvery))) {
       ctx.fillStyle = isNow ? colors.ink : colors.muted;
-      ctx.font = `${isNow ? '700 ' : ''}12px system-ui, -apple-system, "Segoe UI", sans-serif`;
+      ctx.font = font(isNow ? 800 : 600, 11);
       ctx.fillText(formatters.hourLabel(hour.hour).slice(0, 2), xCenter(index), plot.bottom + 14);
     }
     if (isNow || (index % glyphEvery === 0 && !near(index, glyphEvery))) {
@@ -219,14 +225,14 @@ export function drawHourlyChart(canvas, hours, { currentIndex = -1 } = {}) {
 
   // "Now" pill under the current hour's label.
   if (currentIndex >= 0) {
-    ctx.font = '700 11px system-ui, -apple-system, "Segoe UI", sans-serif';
+    ctx.font = font(700, 11);
     const label = copy.nowMarker;
     const pillWidth = ctx.measureText(label).width + 14;
     const pillLeft = Math.min(Math.max(xCenter(currentIndex) - pillWidth / 2, 0), width - pillWidth);
     ctx.fillStyle = colors.now;
     roundedRect(ctx, pillLeft, plot.bottom + 24, pillWidth, 18, 9);
     ctx.fill();
-    ctx.fillStyle = colors.card;
+    ctx.fillStyle = colors.ink;
     ctx.fillText(label, pillLeft + pillWidth / 2, plot.bottom + 33);
   }
 
