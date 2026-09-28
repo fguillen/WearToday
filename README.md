@@ -11,6 +11,8 @@ reasons behind the choice ("Feels like 7°C in the morning", "Rain is likely
 It is a suggestion, not a safety guarantee. The parent still decides,
 keeping in mind the child, the day's activities and the kindergarten's rules.
 
+Live at **https://fguillen.github.io/ToddlerOutfitAdvisor/**.
+
 ## Features
 
 - **One clear answer.** A single recommended outfit, drawn as a layered SVG
@@ -116,7 +118,13 @@ PRODUCT.md                  Full product and design specification
 
 ## Deployment
 
-The build output is a static site, so any static host works (GitHub Pages,
+The live site is served by GitHub Pages at
+https://fguillen.github.io/ToddlerOutfitAdvisor/. Every push to `main` runs
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml), which runs the
+tests, builds with `--base=/ToddlerOutfitAdvisor/` and publishes `dist/`. It
+can also be started by hand from the repository's Actions tab.
+
+To host it somewhere else: the build output is a static site, so any static host works (GitHub Pages,
 Netlify, Cloudflare Pages, an S3 bucket and so on):
 
 ```bash
