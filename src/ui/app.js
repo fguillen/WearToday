@@ -147,6 +147,29 @@ function renderForecastSection(weather, daySummary, { currentIndex, rangeStart, 
     </details>`;
 }
 
+// The "until" hour the user last picked, kept on this device as the default
+// end of the outfit hours.
+const OUTFIT_END_KEY = 'wear-today:outfit-end-hour';
+
+function readOutfitEnd(storage) {
+  try {
+    const hour = Number(storage?.getItem(OUTFIT_END_KEY));
+    return Number.isInteger(hour) && hour > DEFAULTS.dayStartHour && hour <= DEFAULTS.dayEndHour
+      ? hour
+      : DEFAULTS.outfitEndHour;
+  } catch {
+    return DEFAULTS.outfitEndHour;
+  }
+}
+
+function writeOutfitEnd(storage, hour) {
+  try {
+    storage?.setItem(OUTFIT_END_KEY, String(hour));
+  } catch {
+    // Storage unavailable: the end goes back to 22:00 next time.
+  }
+}
+
 // The tracked day, past hours included.
 function dayHours(forecast) {
   return selectWindowHours(forecast.hours, DEFAULTS.dayStartHour, DEFAULTS.dayEndHour - 1);
@@ -158,8 +181,15 @@ export function createApp(root, deps = {}) {
   const now = deps.now ?? (() => new Date());
   const doc = root.ownerDocument;
   const win = doc.defaultView;
+  let storage = null;
+  try {
+    storage = win.localStorage;
+  } catch {
+    // Blocked storage: the outfit end is simply not remembered.
+  }
 
-  let state = createInitialState();
+  let outfitEnd = readOutfitEnd(storage);
+  let state = { ...createInitialState(), range: { fromHour: null, toHour: outfitEnd } };
   let weatherController = null;
   let renderedForecastData = null;
   let renderedCurrentIndex = -1;
@@ -230,7 +260,7 @@ export function createApp(root, deps = {}) {
       followsNow: state.range.fromHour === null,
       min: DEFAULTS.dayStartHour,
       max: DEFAULTS.dayEndHour,
-      defaultEnd: DEFAULTS.outfitEndHour
+      defaultEnd: outfitEnd
     };
   }
 
@@ -355,7 +385,7 @@ export function createApp(root, deps = {}) {
     if (!button || button.disabled) return;
     if (button.dataset.action === 'refresh') loadWeather({ force: true });
     if (button.dataset.action === 'range-now') {
-      setRange({ fromHour: null, toHour: DEFAULTS.outfitEndHour });
+      setRange({ fromHour: null, toHour: outfitEnd });
       // The Now button is gone once the range follows the clock again.
       root.querySelector('#range-from')?.focus();
     }
@@ -367,6 +397,11 @@ export function createApp(root, deps = {}) {
     if (!select || !state.weather.data) return;
     const hour = Number(select.value);
     const { from, to } = outfitRange(state.weather.data);
+    // Only an end the user picks becomes the default; one dragged along does not.
+    if (select.dataset.range === 'to') {
+      outfitEnd = hour;
+      writeOutfitEnd(storage, hour);
+    }
     setRange(
       select.dataset.range === 'from'
         ? { fromHour: hour, toHour: Math.max(to, hour + 1) }

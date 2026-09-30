@@ -239,11 +239,39 @@ describe('app', () => {
     choose('#range-from', 8);
     expect(app.getState().daySummary.window).toMatchObject({ start: '08:00', end: '12:00' });
 
+    // Now puts the start back on the clock and keeps the picked end.
     $('#range-now').click();
-    expect(app.getState().range).toEqual({ fromHour: null, toHour: 22 });
-    expect(app.getState().daySummary.window).toMatchObject({ start: '09:00', end: '22:00' });
+    expect(app.getState().range).toEqual({ fromHour: null, toHour: 12 });
+    expect(app.getState().daySummary.window).toMatchObject({ start: '09:00', end: '12:00' });
     expect($('#range-now')).toBeNull();
     expect(document.activeElement).toBe($('#range-from'));
+  });
+
+  it('remembers the picked end hour as the default for the next visit', async () => {
+    const now = () => new Date('2026-09-25T07:30:00Z');
+    const first = setup({ now });
+    await first.app.start();
+    first.$('#range-to').value = '24';
+    first.$('#range-to').dispatchEvent(new Event('change', { bubbles: true }));
+    // A start picked later is not remembered, nor an end it drags along.
+    first.$('#range-from').value = '23';
+    first.$('#range-from').dispatchEvent(new Event('change', { bubbles: true }));
+    first.app.destroy();
+    first.root.remove();
+
+    const next = setup({ now });
+    await next.app.start();
+    expect(next.$('#range-from').value).toBe('9');
+    expect(next.$('#range-to').value).toBe('24');
+    expect(next.app.getState().daySummary.window).toMatchObject({ start: '09:00', end: '24:00' });
+    expect(next.$('#decision-details').textContent).toContain('Checked 09:00–24:00 (15 hours).');
+  });
+
+  it('falls back to 22:00 when the saved end hour is not usable', async () => {
+    localStorage.setItem('wear-today:outfit-end-hour', 'soon');
+    const { app, $ } = setup({ now: () => new Date('2026-09-25T07:30:00Z') });
+    await app.start();
+    expect($('#range-to').value).toBe('22');
   });
 
   it('keeps a chosen start when the clock moves, and follows the clock otherwise', async () => {
