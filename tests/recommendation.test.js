@@ -57,44 +57,47 @@ describe('outfit catalog', () => {
 });
 
 describe('deriveDaySummary', () => {
-  it('summarizes the whole tracked day, 07:00–22:00', () => {
+  it('summarizes 07:00 until 22:00 by default', () => {
     const { summary } = recommendFor('cold-rain');
-    expect(summary.window).toEqual({ start: '07:00', end: '22:00', hourCount: 16 });
+    expect(summary.window).toEqual({ start: '07:00', end: '22:00', hourCount: 15 });
     expect(summary.minApparentC).toBe(6.9);
-    expect(summary.maxApparentC).toBe(14.4);
+    expect(summary.maxApparentC).toBe(13.9);
     expect(summary.rainLikely).toBe(true);
     expect(summary.maxRainProbability).toBe(70);
-    expect(summary.precipitationTotalMm).toBe(4.5);
+    expect(summary.precipitationTotalMm).toBe(4);
     expect(summary.firstRainHour).toBe(14);
     expect(summary.maxWindKmh).toBe(22);
     expect(summary.sunnyFraction).toBe(0);
   });
 
-  it('only looks at the hours from `fromHour` to the end of the day', () => {
+  it('only looks at the hours from `fromHour` until 22:00', () => {
     const summary = deriveDaySummary(normalizedScenario('cold-rain'), DEFAULTS, { fromHour: 15 });
-    expect(summary.window).toEqual({ start: '15:00', end: '22:00', hourCount: 8 });
+    expect(summary.window).toEqual({ start: '15:00', end: '22:00', hourCount: 7 });
     expect(summary.minApparentC).toBe(10.9);
-    expect(summary.precipitationTotalMm).toBe(4);
+    expect(summary.precipitationTotalMm).toBe(3.5);
     expect(summary.firstRainHour).toBe(15);
   });
 
-  it('clamps `fromHour` into the tracked day', () => {
+  it('clamps `fromHour` into the tracked day, keeping at least the current hour', () => {
     const forecast = normalizedScenario('cold-rain');
     expect(deriveDaySummary(forecast, DEFAULTS, { fromHour: 3 }).window.start).toBe('07:00');
-    expect(deriveDaySummary(forecast, DEFAULTS, { fromHour: 23 }).window).toEqual({ start: '22:00', end: '22:00', hourCount: 1 });
+    expect(deriveDaySummary(forecast, DEFAULTS, { fromHour: 22 }).window).toEqual({ start: '22:00', end: '23:00', hourCount: 1 });
+    expect(deriveDaySummary(forecast, DEFAULTS, { fromHour: 30 }).window).toEqual({ start: '23:00', end: '24:00', hourCount: 1 });
   });
 
-  it('stops at `toHour` and clamps it into the tracked day', () => {
+  it('stops before `toHour`, up to 24:00', () => {
     const forecast = normalizedScenario('cold-rain');
-    expect(deriveDaySummary(forecast, DEFAULTS, { fromHour: 8, toHour: 12 }).window).toEqual({ start: '08:00', end: '12:00', hourCount: 5 });
-    expect(deriveDaySummary(forecast, DEFAULTS, { toHour: 30 }).window.end).toBe('22:00');
-    expect(deriveDaySummary(forecast, DEFAULTS, { fromHour: 15, toHour: 10 }).window).toEqual({ start: '10:00', end: '10:00', hourCount: 1 });
+    expect(deriveDaySummary(forecast, DEFAULTS, { fromHour: 8, toHour: 12 }).window).toEqual({ start: '08:00', end: '12:00', hourCount: 4 });
+    expect(deriveDaySummary(forecast, DEFAULTS, { toHour: 24 }).window).toEqual({ start: '07:00', end: '24:00', hourCount: 17 });
+    expect(deriveDaySummary(forecast, DEFAULTS, { toHour: 30 }).window.end).toBe('24:00');
+    expect(deriveDaySummary(forecast, DEFAULTS, { fromHour: 15, toHour: 10 }).window).toEqual({ start: '15:00', end: '16:00', hourCount: 1 });
   });
 
-  it('says dry until the end of a shorter range', () => {
+  it('says dry until the end of the range, or the rest of the day at 24:00', () => {
     const forecast = normalizedScenario('mild-dry');
     expect(deriveDaySummary(forecast, DEFAULTS, { toHour: 18 }).reasons).toContain(copy.reasonDryUntil('18:00'));
-    expect(deriveDaySummary(forecast, DEFAULTS).reasons).toContain(copy.reasonDry);
+    expect(deriveDaySummary(forecast, DEFAULTS).reasons).toContain(copy.reasonDryUntil('22:00'));
+    expect(deriveDaySummary(forecast, DEFAULTS, { toHour: 24 }).reasons).toContain(copy.reasonDry);
   });
 
   it('drops the cold morning from the outfit once it has passed', () => {
@@ -103,7 +106,7 @@ describe('deriveDaySummary', () => {
     expect(recommendOutfit(later, DEFAULTS).outfitId).toBe('fresh-dry');
   });
 
-  it('ignores cold nights and late-night rain outside the tracked day', () => {
+  it('ignores cold nights and late-night rain after the default outfit hours', () => {
     expect(recommendFor('cold-dry').summary.minApparentC).toBe(2.5);
     const hot = recommendFor('sunny-hot').summary;
     expect(hot.rainLikely).toBe(false);
@@ -184,11 +187,11 @@ describe('recommendOutfit', () => {
   });
 
   it('switches to super-rain at the heavy-rain total, whatever the temperature', () => {
-    // 16 tracked hours; spread the total evenly over them.
+    // 15 hours from 07:00 until 22:00; spread the total evenly over them.
     const at = (totalMm, apparent = 14) =>
       recommendOutfit(
         deriveDaySummary(
-          normalizeForecast(buildRawForecast({ perHour: () => ({ apparent, rainProbability: 60, precipitation: totalMm / 16 }) }))
+          normalizeForecast(buildRawForecast({ perHour: () => ({ apparent, rainProbability: 60, precipitation: totalMm / 15 }) }))
         )
       ).outfitId;
     expect(at(4.8)).toBe('hot-rain');

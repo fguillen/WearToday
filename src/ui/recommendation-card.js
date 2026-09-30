@@ -53,7 +53,7 @@ function renderDetails(daySummary) {
     </details>`;
 }
 
-function hourSelect(id, which, selected, { min, max }) {
+function hourSelect(id, which, selected, min, max) {
   const options = [];
   for (let hour = min; hour <= max; hour += 1) {
     options.push(`<option value="${hour}"${hour === selected ? ' selected' : ''}>${escapeHtml(formatters.hourLabel(hour))}</option>`);
@@ -61,18 +61,18 @@ function hourSelect(id, which, selected, { min, max }) {
   return `<select id="${id}" class="range-select" data-range="${which}">${options.join('')}</select>`;
 }
 
-// "For 09:00 – 22:00": the hours the outfit is for, today only. `Now` shows
-// once the start no longer follows the clock.
+// "For 09:00 – 22:00": the hours the outfit is for, today only, up to 24:00.
+// `Now` shows once the start no longer follows the clock.
 function renderRangePicker(range) {
   const now = range.followsNow
     ? ''
-    : `<button type="button" id="range-now" class="range-now" data-action="range-now" aria-label="${escapeHtml(copy.rangeNowLabel(formatters.hourLabel(range.max)))}">${escapeHtml(copy.rangeNow)}</button>`;
+    : `<button type="button" id="range-now" class="range-now" data-action="range-now" aria-label="${escapeHtml(copy.rangeNowLabel(formatters.hourLabel(range.defaultEnd)))}">${escapeHtml(copy.rangeNow)}</button>`;
   return `
     <div class="range-picker" role="group" aria-label="${escapeHtml(copy.rangeLabel)}">
       <label for="range-from">${escapeHtml(copy.rangeFrom)}</label>
-      ${hourSelect('range-from', 'from', range.from, range)}
+      ${hourSelect('range-from', 'from', range.from, range.min, range.max - 1)}
       <span aria-hidden="true">–</span><label for="range-to" class="visually-hidden">${escapeHtml(copy.rangeTo)}</label>
-      ${hourSelect('range-to', 'to', range.to, range)}
+      ${hourSelect('range-to', 'to', range.to, range.min + 1, range.max)}
       ${now}
     </div>`;
 }

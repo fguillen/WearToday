@@ -18,7 +18,7 @@ export function createInitialState() {
     daySummary: null,
     recommendation: { source: 'rules', outfitId: null, addOns: [], reasons: [] },
     // The hours the outfit is for, today only. `fromHour: null` follows the clock.
-    range: { fromHour: null, toHour: DEFAULTS.dayEndHour },
+    range: { fromHour: null, toHour: DEFAULTS.outfitEndHour },
     chartAvailable: true
   };
 }
@@ -123,7 +123,7 @@ function renderForecastSection(weather, daySummary, { currentIndex, rangeStart, 
     formatters.hourLabel(DEFAULTS.dayStartHour),
     formatters.hourLabel(DEFAULTS.dayEndHour),
     daySummary?.window.start ?? formatters.hourLabel(DEFAULTS.dayStartHour),
-    daySummary?.window.end ?? formatters.hourLabel(DEFAULTS.dayEndHour)
+    daySummary?.window.end ?? formatters.hourLabel(DEFAULTS.outfitEndHour)
   );
   return `
     ${heading}
@@ -149,7 +149,7 @@ function renderForecastSection(weather, daySummary, { currentIndex, rangeStart, 
 
 // The tracked day, past hours included.
 function dayHours(forecast) {
-  return selectWindowHours(forecast.hours, DEFAULTS.dayStartHour, DEFAULTS.dayEndHour);
+  return selectWindowHours(forecast.hours, DEFAULTS.dayStartHour, DEFAULTS.dayEndHour - 1);
 }
 
 export function createApp(root, deps = {}) {
@@ -213,17 +213,25 @@ export function createApp(root, deps = {}) {
     return clock.date === forecast.day.date ? clock.hour : DEFAULTS.dayStartHour;
   }
 
-  // The chosen hours clamped into the tracked day, with the start never past the end.
+  // The chosen hours clamped into the tracked day; `to` is exclusive and at
+  // least an hour after `from`, as in deriveDaySummary.
   function outfitRange(forecast, range = state.range) {
-    const clamp = (hour) => Math.min(Math.max(hour, DEFAULTS.dayStartHour), DEFAULTS.dayEndHour);
-    const to = clamp(range.toHour);
-    return { from: Math.min(clamp(range.fromHour ?? outfitFromHour(forecast)), to), to };
+    const clamp = (hour, min, max) => Math.min(Math.max(hour, min), max);
+    const from = clamp(range.fromHour ?? outfitFromHour(forecast), DEFAULTS.dayStartHour, DEFAULTS.dayEndHour - 1);
+    return { from, to: clamp(range.toHour, from + 1, DEFAULTS.dayEndHour) };
   }
 
   function rangePicker() {
     if (!state.weather.data) return null;
     const { from, to } = outfitRange(state.weather.data);
-    return { from, to, followsNow: state.range.fromHour === null, min: DEFAULTS.dayStartHour, max: DEFAULTS.dayEndHour };
+    return {
+      from,
+      to,
+      followsNow: state.range.fromHour === null,
+      min: DEFAULTS.dayStartHour,
+      max: DEFAULTS.dayEndHour,
+      defaultEnd: DEFAULTS.outfitEndHour
+    };
   }
 
   // Range as positions in `dayHours`, for the chart and table highlight.
@@ -232,7 +240,7 @@ export function createApp(root, deps = {}) {
     const hours = dayHours(forecast);
     return {
       rangeStart: hours.findIndex((hour) => hour.hour >= from),
-      rangeEnd: hours.findLastIndex((hour) => hour.hour <= to)
+      rangeEnd: hours.findLastIndex((hour) => hour.hour < to)
     };
   }
 
@@ -347,13 +355,13 @@ export function createApp(root, deps = {}) {
     if (!button || button.disabled) return;
     if (button.dataset.action === 'refresh') loadWeather({ force: true });
     if (button.dataset.action === 'range-now') {
-      setRange({ fromHour: null, toHour: DEFAULTS.dayEndHour });
+      setRange({ fromHour: null, toHour: DEFAULTS.outfitEndHour });
       // The Now button is gone once the range follows the clock again.
       root.querySelector('#range-from')?.focus();
     }
   }
 
-  // Moving one end past the other drags the other end along.
+  // Moving one end past the other drags the other end along, an hour apart.
   function onChange(event) {
     const select = event.target.closest?.('select[data-range]');
     if (!select || !state.weather.data) return;
@@ -361,8 +369,8 @@ export function createApp(root, deps = {}) {
     const { from, to } = outfitRange(state.weather.data);
     setRange(
       select.dataset.range === 'from'
-        ? { fromHour: hour, toHour: Math.max(to, hour) }
-        : { fromHour: hour < from ? hour : state.range.fromHour, toHour: hour }
+        ? { fromHour: hour, toHour: Math.max(to, hour + 1) }
+        : { fromHour: hour <= from ? hour - 1 : state.range.fromHour, toHour: hour }
     );
   }
 

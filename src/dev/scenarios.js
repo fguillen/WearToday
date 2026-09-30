@@ -91,7 +91,7 @@ export const SCENARIOS = {
     inDay(hour)
       ? { temperature: 13 + (hour - 8) * 0.4, apparent: 10 + (hour - 8) * 0.4, cloudCover: 90, weatherCode: 3, rainProbability: 20, wind: 22 }
       : { temperature: 9, apparent: 7, cloudCover: 90, weatherCode: 3 },
-  // Cold and dry; the night is even colder but outside the tracked day.
+  // Cold and dry; the night is even colder but after the default outfit hours.
   'cold-dry': (hour) =>
     inDay(hour)
       ? { temperature: 6 + (hour - 8) * 0.5, apparent: 3 + (hour - 8) * 0.5, cloudCover: 30, weatherCode: 1, rainProbability: 5 }

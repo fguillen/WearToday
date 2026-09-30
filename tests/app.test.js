@@ -43,9 +43,9 @@ describe('app', () => {
     expect(garments).toContain('Waterproof shoes (water shoes)');
     expect(root.querySelectorAll('.chips .chip')).toHaveLength(3);
     expect($('.chips').textContent).toContain('Rain likely in the afternoon');
-    // 07:00–22:00: the whole tracked day, same data as the chart.
-    expect(root.querySelectorAll('.hourly-table tbody tr')).toHaveLength(16);
-    expect(drawChart.mock.calls[0][1]).toHaveLength(16);
+    // 07:00–24:00: the whole tracked day, same data as the chart.
+    expect(root.querySelectorAll('.hourly-table tbody tr')).toHaveLength(17);
+    expect(drawChart.mock.calls[0][1]).toHaveLength(17);
     // Table: rain amount column and an icon beside each condition.
     const headers = [...root.querySelectorAll('.hourly-table thead th')].map((th) => th.textContent);
     expect(headers).toEqual(copy.tableColumns);
@@ -58,7 +58,7 @@ describe('app', () => {
     // Hero: rain and warmest-hour alerts for the hours ahead, no daily high/low.
     expect(root.querySelector('.temp-range')).toBeNull();
     const pills = [...root.querySelectorAll('.weather-alerts li')].map((li) => li.textContent);
-    expect(pills).toEqual(['70% rain in the afternoon', 'Warmest 14° at 22:00']);
+    expect(pills).toEqual(['70% rain in the afternoon', 'Warmest 14° at 21:00']);
     // Garments grouped by body section, in dressing order.
     const sections = [...root.querySelectorAll('.clothing-row')].map((row) => ({
       section: row.querySelector('.layer-name').textContent,
@@ -144,7 +144,7 @@ describe('app', () => {
     expect($('#chart-wrap').hidden).toBe(true);
     expect($('#chart-unavailable').hidden).toBe(false);
     expect($('#hourly-table-details').open).toBe(true);
-    expect(root.querySelectorAll('.hourly-table tbody tr')).toHaveLength(16);
+    expect(root.querySelectorAll('.hourly-table tbody tr')).toHaveLength(17);
   });
 
   it('marks the current hour and keeps past hours visible', async () => {
@@ -152,9 +152,9 @@ describe('app', () => {
     const { app, $, root, drawChart } = setup({ now: () => new Date('2026-09-25T07:30:00Z') });
     await app.start();
 
-    expect(drawChart.mock.calls[0][2]).toEqual({ currentIndex: 2, rangeStart: 2, rangeEnd: 15 });
+    expect(drawChart.mock.calls[0][2]).toEqual({ currentIndex: 2, rangeStart: 2, rangeEnd: 14 });
     const rows = [...root.querySelectorAll('.hourly-table tbody tr')];
-    expect(rows).toHaveLength(16);
+    expect(rows).toHaveLength(17);
     expect(rows[2].getAttribute('aria-current')).toBe('time');
     expect(rows[2].textContent).toContain('09:00');
     expect(rows[2].querySelector('.now-tag').textContent).toBe(copy.nowMarker);
@@ -162,7 +162,7 @@ describe('app', () => {
     expect(rows.slice(3).some((row) => row.classList.contains('is-past'))).toBe(false);
     expect($('.legend').textContent).toContain(copy.legendNow('09:00'));
     // The outfit only covers the hours still ahead.
-    expect($('#decision-details').textContent).toContain('Checked 09:00–22:00 (14 hours).');
+    expect($('#decision-details').textContent).toContain('Checked 09:00–22:00 (13 hours).');
     expect($('#window-note').textContent).toContain('The outfit covers 09:00–22:00.');
   });
 
@@ -170,7 +170,7 @@ describe('app', () => {
     const { app, $, root, drawChart } = setup({ now: () => new Date('2026-09-26T07:30:00Z') });
     await app.start();
 
-    expect(drawChart.mock.calls[0][2]).toEqual({ currentIndex: -1, rangeStart: 0, rangeEnd: 15 });
+    expect(drawChart.mock.calls[0][2]).toEqual({ currentIndex: -1, rangeStart: 0, rangeEnd: 14 });
     expect(root.querySelector('[aria-current="time"]')).toBeNull();
     expect($('.legend').textContent).not.toContain(copy.legendPast);
   });
@@ -188,7 +188,7 @@ describe('app', () => {
     clock = new Date('2026-09-25T08:01:00Z');
     vi.advanceTimersByTime(60_000);
     expect(root.querySelector('[aria-current="time"] th').textContent).toMatch(/^10:00/);
-    expect(drawChart.mock.lastCall[2]).toEqual({ currentIndex: 3, rangeStart: 3, rangeEnd: 15 });
+    expect(drawChart.mock.lastCall[2]).toEqual({ currentIndex: 3, rangeStart: 3, rangeEnd: 14 });
     expect(app.getState().daySummary.window.start).toBe('10:00');
     app.destroy();
   });
@@ -199,7 +199,11 @@ describe('app', () => {
 
     expect($('#range-from').value).toBe('9');
     expect($('#range-to').value).toBe('22');
-    expect([...$('#range-from').options].map((option) => option.textContent)).toHaveLength(16);
+    const labels = (id) => [...$(id).options].map((option) => option.textContent);
+    expect(labels('#range-from')).toEqual(expect.arrayContaining(['07:00', '23:00']));
+    expect(labels('#range-from')).toHaveLength(17);
+    expect(labels('#range-to').at(0)).toBe('08:00');
+    expect(labels('#range-to').at(-1)).toBe('24:00');
     expect($('#range-now')).toBeNull();
     expect($('.legend').textContent).toContain(copy.legendOutfitHours);
   });
@@ -213,18 +217,24 @@ describe('app', () => {
     };
 
     choose('#range-from', 18);
-    expect($('#decision-details').textContent).toContain('Checked 18:00–22:00 (5 hours).');
+    expect($('#decision-details').textContent).toContain('Checked 18:00–22:00 (4 hours).');
     expect($('#window-note').textContent).toContain('The outfit covers 18:00–22:00.');
     expect($('#range-now')).not.toBeNull();
     const rows = [...root.querySelectorAll('.hourly-table tbody tr')];
     expect(rows.slice(0, 11).every((row) => row.classList.contains('is-outside'))).toBe(true);
-    expect(rows.slice(11).some((row) => row.classList.contains('is-outside'))).toBe(false);
-    expect(drawChart.mock.lastCall[2]).toEqual({ currentIndex: 2, rangeStart: 11, rangeEnd: 15 });
+    expect(rows.slice(11, 15).some((row) => row.classList.contains('is-outside'))).toBe(false);
+    expect(rows.slice(15).every((row) => row.classList.contains('is-outside'))).toBe(true);
+    expect(drawChart.mock.lastCall[2]).toEqual({ currentIndex: 2, rangeStart: 11, rangeEnd: 14 });
 
-    // Moving the end before the start drags the start along.
+    // The end can go on to midnight.
+    choose('#range-to', 24);
+    expect(app.getState().daySummary.window).toEqual({ start: '18:00', end: '24:00', hourCount: 6 });
+    expect(drawChart.mock.lastCall[2]).toEqual({ currentIndex: 2, rangeStart: 11, rangeEnd: 16 });
+
+    // Moving the end to or before the start drags the start along, an hour earlier.
     choose('#range-to', 12);
-    expect($('#range-from').value).toBe('12');
-    expect(app.getState().daySummary.window).toEqual({ start: '12:00', end: '12:00', hourCount: 1 });
+    expect($('#range-from').value).toBe('11');
+    expect(app.getState().daySummary.window).toEqual({ start: '11:00', end: '12:00', hourCount: 1 });
 
     choose('#range-from', 8);
     expect(app.getState().daySummary.window).toMatchObject({ start: '08:00', end: '12:00' });

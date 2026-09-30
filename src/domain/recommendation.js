@@ -6,8 +6,10 @@ import { feelsLike, selectWindowHours } from './forecast.js';
 // should let users adjust them.
 export const DEFAULTS = Object.freeze({
   timezone: 'Europe/Berlin',
+  // Hours are one-hour slots; end hours are exclusive, so 24 takes in 23:00–24:00.
   dayStartHour: 7,
-  dayEndHour: 22,
+  dayEndHour: 24,
+  outfitEndHour: 22,
   hotMinimumApparentC: 22,
   mildMinimumApparentC: 16,
   freshMinimumApparentC: 9,
@@ -37,16 +39,17 @@ const round1 = (value) => Math.round(value * 10) / 10;
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
 // Only the hours the outfit is for matter: `fromHour` (usually the current
-// hour) to `toHour` (usually the end of the day), both clamped into the tracked
-// day, so before 07:00 the whole day counts and after 22:00 only the last hour does.
+// hour) up to `toHour` (exclusive, 22:00 by default), clamped into the tracked
+// day. The range always spans at least one hour, so late at night the end moves
+// out to keep the current hour.
 export function deriveDaySummary(
   forecast,
   defaults = DEFAULTS,
-  { fromHour = defaults.dayStartHour, toHour = defaults.dayEndHour } = {}
+  { fromHour = defaults.dayStartHour, toHour = defaults.outfitEndHour } = {}
 ) {
-  const end = clamp(toHour, defaults.dayStartHour, defaults.dayEndHour);
-  const start = clamp(fromHour, defaults.dayStartHour, end);
-  const windowHours = selectWindowHours(forecast.hours, start, end).filter((hour) => feelsLike(hour) !== null);
+  const start = clamp(fromHour, defaults.dayStartHour, defaults.dayEndHour - 1);
+  const end = clamp(toHour, start + 1, defaults.dayEndHour);
+  const windowHours = selectWindowHours(forecast.hours, start, end - 1).filter((hour) => feelsLike(hour) !== null);
   if (windowHours.length === 0) throw new InsufficientForecastError();
 
   const coldest = windowHours.reduce((min, hour) => (feelsLike(hour) < feelsLike(min) ? hour : min));
