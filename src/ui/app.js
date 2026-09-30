@@ -73,6 +73,10 @@ function renderHeroPills(forecast, daySummary, recommendation) {
     const when = copy.timeOfDay(daySummary.firstRainHour ?? DEFAULTS.dayStartHour);
     alerts.push(pill('alert-pill', 'umbrellaRain', 'icon-rain', copy.alertRain(daySummary.maxRainProbability, when)));
   }
+  if (daySummary) {
+    const temp = formatters.temperature(daySummary.maxApparentC);
+    alerts.push(pill('alert-pill', 'sun', 'icon-sun', copy.alertWarmest(temp, formatters.hourLabel(daySummary.warmestHour))));
+  }
 
   const reasons = recommendation.reasons
     .slice(0, 3)
