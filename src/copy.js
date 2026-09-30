@@ -107,6 +107,7 @@ export const copy = {
   tipsHeading: 'Before you go…',
   tipsText: 'Forecasts can change. Consider your own comfort, your plans for the day, and any dress rules where you’re going.',
   footer: 'Weather data: Open-Meteo / DWD (CC BY 4.0) · Forecasts are estimates',
+  version: (version) => `Version ${version}`,
 
   // Live announcements
   announceForecastUpdated: (time) => `Forecast updated at ${time}.`

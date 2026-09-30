@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { copy, formatters } from '../src/copy.js';
 import { WeatherServiceError } from '../src/services/weather-service.js';
 import { createApp } from '../src/ui/app.js';
+import pkg from '../package.json' with { type: 'json' };
 import { normalizedScenario } from './fixtures.js';
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -16,6 +17,11 @@ function setup({ scenario = 'cold-rain', load, readCache = () => null, drawChart
 }
 
 describe('app', () => {
+  it('shows the app version in the footer', () => {
+    const { $ } = setup({ load: () => new Promise(() => {}) });
+    expect($('#app-version').textContent).toBe(`Version ${pkg.version}`);
+  });
+
   it('shows an accessible loading indicator initially', () => {
     const { app, $ } = setup({ load: () => new Promise(() => {}) });
     app.start();

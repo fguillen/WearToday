@@ -1,7 +1,12 @@
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
+import pkg from './package.json' with { type: 'json' };
 
 export default defineConfig({
+  // Shown in the footer so an installed copy can be checked against a release.
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version)
+  },
   plugins: [
     // Installable, offline app shell. The service worker only exists in
     // production builds; forecast data stays in the app's own cache.

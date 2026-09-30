@@ -44,7 +44,10 @@ function renderShell() {
         </div>
       </section>
     </main>
-    <footer class="site-footer"><p>${escapeHtml(copy.footer)}</p></footer>
+    <footer class="site-footer">
+      <p>${escapeHtml(copy.footer)}</p>
+      <p id="app-version">${escapeHtml(copy.version(__APP_VERSION__))}</p>
+    </footer>
     <div id="announcer" class="visually-hidden" aria-live="polite"></div>`;
 }
 
