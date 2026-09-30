@@ -49,9 +49,10 @@ describe('app', () => {
     expect(tableRows.every((row) => row.children[4].querySelector('svg.condition-icon') && row.children[4].textContent.trim())).toBe(true);
     expect($('.legend').textContent).toContain(copy.legendRainAmount);
     expect($('.snapshot').textContent).not.toMatch(/kindergarten/i);
-    // Hero: daily high/low plus rain and warmest-hour alerts for the hours ahead.
-    const pills = [...root.querySelectorAll('.temp-range li, .weather-alerts li')].map((li) => li.textContent);
-    expect(pills).toEqual(['High 16°', 'Low 8°', '70% rain in the afternoon', 'Warmest 14° at 22:00']);
+    // Hero: rain and warmest-hour alerts for the hours ahead, no daily high/low.
+    expect(root.querySelector('.temp-range')).toBeNull();
+    const pills = [...root.querySelectorAll('.weather-alerts li')].map((li) => li.textContent);
+    expect(pills).toEqual(['70% rain in the afternoon', 'Warmest 14° at 22:00']);
     // Garments grouped by body section, in dressing order.
     const sections = [...root.querySelectorAll('.clothing-row')].map((row) => ({
       section: row.querySelector('.layer-name').textContent,

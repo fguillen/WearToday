@@ -39,8 +39,6 @@ const STROKE = {
   umbrellaRain: '<path d="M12 3a8 8 0 0 1 8 8H4a8 8 0 0 1 8-8z"/><path d="M12 11v7a2 2 0 0 1-4 0"/>',
 
   // Interface
-  arrowUp: '<path d="M12 20V4m-6 6 6-6 6 6"/>',
-  arrowDown: '<path d="M12 4v16m-6-6 6 6 6-6"/>',
   refresh: '<path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/>'
 };
 

@@ -479,7 +479,7 @@ Create a warm, calm, modern interface for a busy person getting ready in the mor
   <section aria-labelledby="today-heading">                 // Weather snapshot
     Today in Berlin · Friday, 25 September
     10° · Feels like 8° · Overcast
-    High/Low pills · alert pills · reason chips
+    alert pills · reason chips
   </section>
 
   <section aria-labelledby="outfit-heading">                // Primary recommendation
@@ -507,7 +507,7 @@ Create a warm, calm, modern interface for a busy person getting ready in the mor
 </footer>
 ```
 
-**All widths:** one centred column, at most 600px wide, in the order above. The snapshot lives in the sky-blue hero together with the brand and Refresh button: big current temperature, “Feels like … · condition”, `Berlin · Updated …`, High/Low pills, and alert pills for the hours still ahead (rain chance when rain is likely, warmest hour), followed by the outfit’s reason chips in the same pill style. The hour-by-hour section carries the “We track the whole day…” note. The graphic must be clearly readable without pinch zoom.
+**All widths:** one centred column, at most 600px wide, in the order above. The snapshot lives in the sky-blue hero together with the brand and Refresh button: big current temperature, “Feels like … · condition”, `Berlin · Updated …`, and alert pills for the hours still ahead (rain chance when rain is likely, warmest hour), followed by the outfit’s reason chips in the same pill style. The hour-by-hour section carries the “We track the whole day…” note. The graphic must be clearly readable without pinch zoom.
 
 ### 7.3 Recommendation card
 

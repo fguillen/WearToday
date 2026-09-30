@@ -57,17 +57,8 @@ function pill(className, iconName, iconClass, text) {
   return `<li class="${className}">${icon(iconName, iconClass)}${escapeHtml(text)}</li>`;
 }
 
-// High/low come from the daily forecast; the alerts and the outfit reasons
-// from the hours still ahead.
-function renderHeroPills(forecast, daySummary, recommendation) {
-  const temps = dayHours(forecast).map((hour) => hour.temperatureC).filter(Number.isFinite);
-  const high = forecast.day.highC ?? (temps.length ? Math.max(...temps) : null);
-  const low = forecast.day.lowC ?? (temps.length ? Math.min(...temps) : null);
-  const range = [
-    high !== null && pill('range-pill', 'arrowUp', 'icon-high', copy.high(formatters.temperature(high))),
-    low !== null && pill('range-pill', 'arrowDown', 'icon-low', copy.low(formatters.temperature(low)))
-  ].filter(Boolean);
-
+// The alerts and the outfit reasons come from the hours still ahead.
+function renderHeroPills(daySummary, recommendation) {
   const alerts = [];
   if (daySummary?.rainLikely && daySummary.maxRainProbability > 0) {
     const when = copy.timeOfDay(daySummary.firstRainHour ?? DEFAULTS.dayStartHour);
@@ -83,7 +74,6 @@ function renderHeroPills(forecast, daySummary, recommendation) {
     .map((reason) => pill('chip', 'sparkle', 'icon-sun', reason));
 
   return `
-    ${range.length ? `<ul class="temp-range">${range.join('')}</ul>` : ''}
     ${alerts.length ? `<ul class="weather-alerts">${alerts.join('')}</ul>` : ''}
     ${reasons.length ? `<ul class="chips" aria-label="${escapeHtml(copy.reasonsLabel)}">${reasons.join('')}</ul>` : ''}`;
 }
@@ -100,7 +90,7 @@ function renderSnapshot(weather, daySummary, recommendation) {
         <p class="temp-main"><span class="visually-hidden">${escapeHtml(copy.temperatureNow(temperature))}</span><span aria-hidden="true">${escapeHtml(temperature)}<span class="deg">°</span></span></p>
         <p class="temp-details">${weatherIcon(meta.icon)}${escapeHtml(copy.feelsLine(feels, meta.label))}</p>
         ${headerMeta(weather)}
-        ${renderHeroPills(weather.data, daySummary, recommendation)}
+        ${renderHeroPills(daySummary, recommendation)}
       </div>`;
   }
   if (weather.status === 'error') return `${renderWeatherError(weather)}${headerMeta(weather)}`;

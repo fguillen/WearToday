@@ -242,7 +242,6 @@ ul {
   font-weight: 500;
 }
 
-.temp-range,
 .weather-alerts,
 .chips {
   display: flex;
@@ -251,16 +250,14 @@ ul {
   gap: var(--space-sm);
 }
 
-.temp-range {
+.weather-alerts {
   margin-top: var(--space-md);
 }
 
-.weather-alerts,
 .chips {
   margin-top: var(--space-sm);
 }
 
-.range-pill,
 .alert-pill,
 .chip {
   display: flex;
@@ -273,7 +270,6 @@ ul {
   font-weight: 700;
 }
 
-.range-pill svg,
 .alert-pill svg,
 .chip svg {
   width: 14px;
@@ -282,9 +278,7 @@ ul {
   stroke-width: 2.5;
 }
 
-.icon-high,
 .icon-sun { color: #B07800; }
-.icon-low,
 .icon-rain { color: #2F6F94; }
 
 /* Hero error card (no forecast at all) */
