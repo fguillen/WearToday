@@ -3,6 +3,7 @@ import { copy, formatters } from '../src/copy.js';
 import { WeatherServiceError } from '../src/services/weather-service.js';
 import { createApp } from '../src/ui/app.js';
 import pkg from '../package.json' with { type: 'json' };
+import { APP_VERSION } from '../src/version.js';
 import { normalizedScenario } from './fixtures.js';
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -19,7 +20,11 @@ function setup({ scenario = 'cold-rain', load, readCache = () => null, drawChart
 describe('app', () => {
   it('shows the app version in the footer', () => {
     const { $ } = setup({ load: () => new Promise(() => {}) });
-    expect($('#app-version').textContent).toBe(`Version ${pkg.version}`);
+    expect($('#app-version').textContent).toBe(`Version ${APP_VERSION}`);
+  });
+
+  it('keeps package.json on the same version as src/version.js', () => {
+    expect(pkg.version, 'Bump "version" in package.json to match APP_VERSION').toBe(APP_VERSION);
   });
 
   it('shows an accessible loading indicator initially', () => {

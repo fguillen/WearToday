@@ -7,6 +7,7 @@ import { drawHourlyChart, renderHourlyTable } from './hourly-chart.js';
 import { escapeHtml } from './html.js';
 import { icon, weatherIcon } from './icons.js';
 import { renderRecommendationCard } from './recommendation-card.js';
+import { APP_VERSION } from '../version.js';
 import { renderStatusBanner, renderWeatherError } from './status-banner.js';
 
 // How often to check whether the clock moved into a new hour.
@@ -46,7 +47,7 @@ function renderShell() {
     </main>
     <footer class="site-footer">
       <p>${escapeHtml(copy.footer)}</p>
-      <p id="app-version">${escapeHtml(copy.version(__APP_VERSION__))}</p>
+      <p id="app-version">${escapeHtml(copy.version(APP_VERSION))}</p>
     </footer>
     <div id="announcer" class="visually-hidden" aria-live="polite"></div>`;
 }
