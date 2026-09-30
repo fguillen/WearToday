@@ -22,7 +22,6 @@ export const copy = {
   high: (temp) => `High ${temp}°`,
   low: (temp) => `Low ${temp}°`,
   alertRain: (percent, when) => `${percent}% rain ${when}`,
-  alertWarmest: (temp, time) => `Warmest ${temp}° at ${time}`,
   windowNote: (start, end, from) => `We track the whole day, ${start}–${end}, hour by hour. The outfit covers ${from}–${end}.`,
   staleNotice: 'Showing a saved forecast. It may be out of date.',
   weatherErrorTitle: 'Forecast unavailable',
