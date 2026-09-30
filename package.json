@@ -1,7 +1,7 @@
 {
   "name": "wear-today",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "What should you wear in Berlin today? A small weather-based outfit advisor.",
   "license": "MIT",
   "author": "Fernando Guillén Suárez",
