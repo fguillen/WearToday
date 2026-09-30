@@ -101,7 +101,8 @@ function roundedRect(ctx, x, y, width, height, radius) {
 }
 
 // `currentIndex` is the position of the current hour in `hours` (-1: not today).
-export function drawHourlyChart(canvas, hours, { currentIndex = -1 } = {}) {
+// `rangeStart`..`rangeEnd` are the hours the outfit is for; the rest are dimmed.
+export function drawHourlyChart(canvas, hours, { currentIndex = -1, rangeStart = 0, rangeEnd = hours.length - 1 } = {}) {
   const ctx = canvas?.getContext?.('2d');
   if (!ctx || hours.length === 0) return false;
 
@@ -229,6 +230,18 @@ export function drawHourlyChart(canvas, hours, { currentIndex = -1 } = {}) {
     ctx.stroke();
   }
 
+  // Hours outside the outfit range fade behind a veil of the card colour; a
+  // bar under the axis spans the hours the outfit is for.
+  ctx.save();
+  ctx.globalAlpha = 0.6;
+  ctx.fillStyle = colors.card;
+  if (rangeStart > 0) ctx.fillRect(plot.left, 0, slot * rangeStart, plot.bottom);
+  if (rangeEnd < hours.length - 1) ctx.fillRect(plot.left + slot * (rangeEnd + 1), 0, slot * (hours.length - 1 - rangeEnd), plot.bottom);
+  ctx.restore();
+  ctx.fillStyle = colors.sun;
+  roundedRect(ctx, plot.left + slot * rangeStart + 2, plot.bottom + 1, slot * (rangeEnd - rangeStart + 1) - 4, 4, 2);
+  ctx.fill();
+
   // X labels + weather glyphs, thinned out on narrow screens. The current
   // hour always gets both; skipped neighbours keep the labels from colliding.
   const labelEvery = slot < 34 ? 2 : 1;
@@ -263,14 +276,18 @@ export function drawHourlyChart(canvas, hours, { currentIndex = -1 } = {}) {
   return true;
 }
 
-export function renderHourlyTable(hours, { currentIndex = -1 } = {}) {
+export function renderHourlyTable(hours, { currentIndex = -1, rangeStart = 0, rangeEnd = hours.length - 1 } = {}) {
   const [time, feels, rain, rainAmount, condition, wind] = copy.tableColumns;
   const rows = hours
     .map((hour, index) => {
       const feelsValue = feelsLike(hour);
       const meta = getWeatherMeta(hour.weatherCode);
       const isNow = index === currentIndex;
-      const rowAttrs = isNow ? ' class="is-now" aria-current="time"' : currentIndex > index ? ' class="is-past"' : '';
+      const classes = [
+        isNow ? 'is-now' : currentIndex > index ? 'is-past' : '',
+        index < rangeStart || index > rangeEnd ? 'is-outside' : ''
+      ].filter(Boolean);
+      const rowAttrs = `${classes.length ? ` class="${classes.join(' ')}"` : ''}${isNow ? ' aria-current="time"' : ''}`;
       return `<tr${rowAttrs}>
         <th scope="row">${escapeHtml(formatters.localHourLabel(hour.time))}${isNow ? ` <span class="now-tag">${escapeHtml(copy.nowMarker)}</span>` : ''}</th>
         <td>${Number.isFinite(feelsValue) ? `${Math.round(feelsValue)}°C` : '–'}</td>

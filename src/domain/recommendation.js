@@ -34,12 +34,18 @@ export class InsufficientForecastError extends Error {
 
 const round1 = (value) => Math.round(value * 10) / 10;
 
-// Only the hours still ahead matter for what to wear: `fromHour` (usually the
-// current hour) is clamped into the tracked day, so before 07:00 the whole day
-// counts and after 22:00 only the last hour does.
-export function deriveDaySummary(forecast, defaults = DEFAULTS, { fromHour = defaults.dayStartHour } = {}) {
-  const end = defaults.dayEndHour;
-  const start = Math.min(Math.max(fromHour, defaults.dayStartHour), end);
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+// Only the hours the outfit is for matter: `fromHour` (usually the current
+// hour) to `toHour` (usually the end of the day), both clamped into the tracked
+// day, so before 07:00 the whole day counts and after 22:00 only the last hour does.
+export function deriveDaySummary(
+  forecast,
+  defaults = DEFAULTS,
+  { fromHour = defaults.dayStartHour, toHour = defaults.dayEndHour } = {}
+) {
+  const end = clamp(toHour, defaults.dayStartHour, defaults.dayEndHour);
+  const start = clamp(fromHour, defaults.dayStartHour, end);
   const windowHours = selectWindowHours(forecast.hours, start, end).filter((hour) => feelsLike(hour) !== null);
   if (windowHours.length === 0) throw new InsufficientForecastError();
 
@@ -87,11 +93,11 @@ export function deriveDaySummary(forecast, defaults = DEFAULTS, { fromHour = def
     hotAndSunny,
     maxWindKmh
   };
-  summary.reasons = buildReasons(summary, defaults);
+  summary.reasons = buildReasons(summary, defaults, end);
   return summary;
 }
 
-function buildReasons(summary, defaults) {
+function buildReasons(summary, defaults, endHour) {
   const reasons = [];
 
   if (summary.rainLikely) {
@@ -112,7 +118,9 @@ function buildReasons(summary, defaults) {
   else if (summary.maxWindKmh >= BREEZY_KMH) reasons.push(copy.reasonBreezy(summary.maxWindKmh));
 
   if (summary.hotAndSunny) reasons.push(copy.reasonSunny);
-  if (!summary.rainLikely) reasons.push(copy.reasonDry);
+  if (!summary.rainLikely) {
+    reasons.push(endHour < defaults.dayEndHour ? copy.reasonDryUntil(summary.window.end) : copy.reasonDry);
+  }
 
   return reasons;
 }

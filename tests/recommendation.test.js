@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { copy } from '../src/copy.js';
 import { GARMENTS, OUTFITS, SECTIONS, getOutfitById, groupBySection } from '../src/data/outfits.js';
 import { normalizeForecast } from '../src/domain/forecast.js';
 import {
@@ -81,6 +82,19 @@ describe('deriveDaySummary', () => {
     const forecast = normalizedScenario('cold-rain');
     expect(deriveDaySummary(forecast, DEFAULTS, { fromHour: 3 }).window.start).toBe('07:00');
     expect(deriveDaySummary(forecast, DEFAULTS, { fromHour: 23 }).window).toEqual({ start: '22:00', end: '22:00', hourCount: 1 });
+  });
+
+  it('stops at `toHour` and clamps it into the tracked day', () => {
+    const forecast = normalizedScenario('cold-rain');
+    expect(deriveDaySummary(forecast, DEFAULTS, { fromHour: 8, toHour: 12 }).window).toEqual({ start: '08:00', end: '12:00', hourCount: 5 });
+    expect(deriveDaySummary(forecast, DEFAULTS, { toHour: 30 }).window.end).toBe('22:00');
+    expect(deriveDaySummary(forecast, DEFAULTS, { fromHour: 15, toHour: 10 }).window).toEqual({ start: '10:00', end: '10:00', hourCount: 1 });
+  });
+
+  it('says dry until the end of a shorter range', () => {
+    const forecast = normalizedScenario('mild-dry');
+    expect(deriveDaySummary(forecast, DEFAULTS, { toHour: 18 }).reasons).toContain(copy.reasonDryUntil('18:00'));
+    expect(deriveDaySummary(forecast, DEFAULTS).reasons).toContain(copy.reasonDry);
   });
 
   it('drops the cold morning from the outfit once it has passed', () => {

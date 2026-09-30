@@ -146,7 +146,7 @@ describe('app', () => {
     const { app, $, root, drawChart } = setup({ now: () => new Date('2026-09-25T07:30:00Z') });
     await app.start();
 
-    expect(drawChart.mock.calls[0][2]).toEqual({ currentIndex: 2 });
+    expect(drawChart.mock.calls[0][2]).toEqual({ currentIndex: 2, rangeStart: 2, rangeEnd: 15 });
     const rows = [...root.querySelectorAll('.hourly-table tbody tr')];
     expect(rows).toHaveLength(16);
     expect(rows[2].getAttribute('aria-current')).toBe('time');
@@ -164,7 +164,7 @@ describe('app', () => {
     const { app, $, root, drawChart } = setup({ now: () => new Date('2026-09-26T07:30:00Z') });
     await app.start();
 
-    expect(drawChart.mock.calls[0][2]).toEqual({ currentIndex: -1 });
+    expect(drawChart.mock.calls[0][2]).toEqual({ currentIndex: -1, rangeStart: 0, rangeEnd: 15 });
     expect(root.querySelector('[aria-current="time"]')).toBeNull();
     expect($('.legend').textContent).not.toContain(copy.legendPast);
   });
@@ -182,8 +182,75 @@ describe('app', () => {
     clock = new Date('2026-09-25T08:01:00Z');
     vi.advanceTimersByTime(60_000);
     expect(root.querySelector('[aria-current="time"] th').textContent).toMatch(/^10:00/);
-    expect(drawChart.mock.lastCall[2]).toEqual({ currentIndex: 3 });
+    expect(drawChart.mock.lastCall[2]).toEqual({ currentIndex: 3, rangeStart: 3, rangeEnd: 15 });
     expect(app.getState().daySummary.window.start).toBe('10:00');
+    app.destroy();
+  });
+
+  it('shows the outfit hours, from now until 22:00 by default', async () => {
+    const { app, $ } = setup({ now: () => new Date('2026-09-25T07:30:00Z') });
+    await app.start();
+
+    expect($('#range-from').value).toBe('9');
+    expect($('#range-to').value).toBe('22');
+    expect([...$('#range-from').options].map((option) => option.textContent)).toHaveLength(16);
+    expect($('#range-now')).toBeNull();
+    expect($('.legend').textContent).toContain(copy.legendOutfitHours);
+  });
+
+  it('recomputes the outfit for a chosen range of today', async () => {
+    const { app, $, root, drawChart } = setup({ now: () => new Date('2026-09-25T07:30:00Z') });
+    await app.start();
+    const choose = (id, hour) => {
+      $(id).value = String(hour);
+      $(id).dispatchEvent(new Event('change', { bubbles: true }));
+    };
+
+    choose('#range-from', 18);
+    expect($('#decision-details').textContent).toContain('Checked 18:00–22:00 (5 hours).');
+    expect($('#window-note').textContent).toContain('The outfit covers 18:00–22:00.');
+    expect($('#range-now')).not.toBeNull();
+    const rows = [...root.querySelectorAll('.hourly-table tbody tr')];
+    expect(rows.slice(0, 11).every((row) => row.classList.contains('is-outside'))).toBe(true);
+    expect(rows.slice(11).some((row) => row.classList.contains('is-outside'))).toBe(false);
+    expect(drawChart.mock.lastCall[2]).toEqual({ currentIndex: 2, rangeStart: 11, rangeEnd: 15 });
+
+    // Moving the end before the start drags the start along.
+    choose('#range-to', 12);
+    expect($('#range-from').value).toBe('12');
+    expect(app.getState().daySummary.window).toEqual({ start: '12:00', end: '12:00', hourCount: 1 });
+
+    choose('#range-from', 8);
+    expect(app.getState().daySummary.window).toMatchObject({ start: '08:00', end: '12:00' });
+
+    $('#range-now').click();
+    expect(app.getState().range).toEqual({ fromHour: null, toHour: 22 });
+    expect(app.getState().daySummary.window).toMatchObject({ start: '09:00', end: '22:00' });
+    expect($('#range-now')).toBeNull();
+    expect(document.activeElement).toBe($('#range-from'));
+  });
+
+  it('keeps a chosen start when the clock moves, and follows the clock otherwise', async () => {
+    vi.useFakeTimers();
+    let clock = new Date('2026-09-25T07:59:00Z');
+    const { app, $ } = setup({
+      now: () => clock,
+      readCache: () => ({ data: normalizedScenario('mild-dry'), isFresh: true })
+    });
+    await app.start();
+
+    // Changing only the end keeps the start on the clock.
+    $('#range-to').value = '18';
+    $('#range-to').dispatchEvent(new Event('change', { bubbles: true }));
+    clock = new Date('2026-09-25T08:01:00Z');
+    vi.advanceTimersByTime(60_000);
+    expect(app.getState().daySummary.window).toMatchObject({ start: '10:00', end: '18:00' });
+
+    $('#range-from').value = '15';
+    $('#range-from').dispatchEvent(new Event('change', { bubbles: true }));
+    clock = new Date('2026-09-25T09:01:00Z');
+    vi.advanceTimersByTime(60_000);
+    expect(app.getState().daySummary.window).toMatchObject({ start: '15:00', end: '18:00' });
     app.destroy();
   });
 

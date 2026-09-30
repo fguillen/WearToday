@@ -17,6 +17,8 @@ export function createInitialState() {
     weather: { status: 'idle', data: null, error: null, isStale: false },
     daySummary: null,
     recommendation: { source: 'rules', outfitId: null, addOns: [], reasons: [] },
+    // The hours the outfit is for, today only. `fromHour: null` follows the clock.
+    range: { fromHour: null, toHour: DEFAULTS.dayEndHour },
     chartAvailable: true
   };
 }
@@ -102,7 +104,7 @@ function renderSnapshot(weather, daySummary, recommendation) {
     ${headerMeta(weather)}`;
 }
 
-function renderForecastSection(weather, daySummary, currentIndex) {
+function renderForecastSection(weather, daySummary, { currentIndex, rangeStart, rangeEnd }) {
   const heading = `<h2 id="forecast-heading" class="section-title">${escapeHtml(copy.forecastHeading)}</h2>`;
   if (!weather.data) {
     return weather.status === 'error'
@@ -117,7 +119,8 @@ function renderForecastSection(weather, daySummary, currentIndex) {
   const note = copy.windowNote(
     formatters.hourLabel(DEFAULTS.dayStartHour),
     formatters.hourLabel(DEFAULTS.dayEndHour),
-    daySummary?.window.start ?? formatters.hourLabel(DEFAULTS.dayStartHour)
+    daySummary?.window.start ?? formatters.hourLabel(DEFAULTS.dayStartHour),
+    daySummary?.window.end ?? formatters.hourLabel(DEFAULTS.dayEndHour)
   );
   return `
     ${heading}
@@ -127,6 +130,7 @@ function renderForecastSection(weather, daySummary, currentIndex) {
       <li><span class="swatch swatch-line" aria-hidden="true"></span>${escapeHtml(copy.legendTemperature)}</li>
       <li><span class="swatch swatch-bar" aria-hidden="true"></span>${escapeHtml(copy.legendRain)}</li>
       <li><span class="swatch swatch-mm" aria-hidden="true">0.4</span>${escapeHtml(copy.legendRainAmount)}</li>
+      <li><span class="swatch swatch-range" aria-hidden="true"></span>${escapeHtml(copy.legendOutfitHours)}</li>
       ${nowLegend}
     </ul>
     <div class="chart-container" id="chart-wrap">
@@ -136,7 +140,7 @@ function renderForecastSection(weather, daySummary, currentIndex) {
     <p class="chart-unavailable muted" id="chart-unavailable" hidden>${escapeHtml(copy.chartUnavailable)}</p>
     <details class="disclosure table-details" id="hourly-table-details">
       <summary>${escapeHtml(copy.tableSummary)}</summary>
-      ${renderHourlyTable(hours, { currentIndex })}
+      ${renderHourlyTable(hours, { currentIndex, rangeStart, rangeEnd })}
     </details>`;
 }
 
@@ -156,6 +160,7 @@ export function createApp(root, deps = {}) {
   let weatherController = null;
   let renderedForecastData = null;
   let renderedCurrentIndex = -1;
+  let renderedRange = '';
   let clockTimer = 0;
   let focusMemoId = null;
   let resizeFrame = 0;
@@ -198,11 +203,34 @@ export function createApp(root, deps = {}) {
     return state.weather.data ? currentHourIndex(dayHours(state.weather.data), now(), DEFAULTS.timezone) : -1;
   }
 
-  // The outfit looks at the hours from now to the end of the day; a forecast
-  // for another day falls back to the whole day.
+  // By default the outfit looks at the hours from now to the end of the day; a
+  // forecast for another day falls back to the whole day.
   function outfitFromHour(forecast) {
     const clock = localDateHour(now(), DEFAULTS.timezone);
     return clock.date === forecast.day.date ? clock.hour : DEFAULTS.dayStartHour;
+  }
+
+  // The chosen hours clamped into the tracked day, with the start never past the end.
+  function outfitRange(forecast, range = state.range) {
+    const clamp = (hour) => Math.min(Math.max(hour, DEFAULTS.dayStartHour), DEFAULTS.dayEndHour);
+    const to = clamp(range.toHour);
+    return { from: Math.min(clamp(range.fromHour ?? outfitFromHour(forecast)), to), to };
+  }
+
+  function rangePicker() {
+    if (!state.weather.data) return null;
+    const { from, to } = outfitRange(state.weather.data);
+    return { from, to, followsNow: state.range.fromHour === null, min: DEFAULTS.dayStartHour, max: DEFAULTS.dayEndHour };
+  }
+
+  // Range as positions in `dayHours`, for the chart and table highlight.
+  function rangeIndices(forecast) {
+    const { from, to } = outfitRange(forecast);
+    const hours = dayHours(forecast);
+    return {
+      rangeStart: hours.findIndex((hour) => hour.hour >= from),
+      rangeEnd: hours.findLastIndex((hour) => hour.hour <= to)
+    };
   }
 
   function render() {
@@ -219,17 +247,21 @@ export function createApp(root, deps = {}) {
         outfit: state.recommendation.outfitId ? getOutfitById(state.recommendation.outfitId) : null,
         recommendation: state.recommendation,
         daySummary: state.daySummary,
-        weatherStatus: weather.status
+        weatherStatus: weather.status,
+        range: rangePicker()
       });
       const details = el.outfit.querySelector('#decision-details');
       if (details) details.open = detailsOpen;
 
-      // The chart only changes with new forecast data or a new hour.
+      // The chart only changes with new forecast data, a new hour or a new range.
       const nowIndex = currentIndex();
-      if (weather.data !== renderedForecastData || nowIndex !== renderedCurrentIndex || !weather.data) {
-        el.forecast.innerHTML = renderForecastSection(weather, state.daySummary, nowIndex);
+      const range = weather.data ? rangeIndices(weather.data) : {};
+      const rangeKey = `${range.rangeStart}-${range.rangeEnd}`;
+      if (weather.data !== renderedForecastData || nowIndex !== renderedCurrentIndex || rangeKey !== renderedRange || !weather.data) {
+        el.forecast.innerHTML = renderForecastSection(weather, state.daySummary, { currentIndex: nowIndex, ...range });
         renderedForecastData = weather.data;
         renderedCurrentIndex = nowIndex;
+        renderedRange = rangeKey;
         if (weather.data) paintChart();
       }
     });
@@ -240,7 +272,10 @@ export function createApp(root, deps = {}) {
     if (!canvas || !state.weather.data) return;
     let drawn = false;
     try {
-      drawn = drawChart(canvas, dayHours(state.weather.data), { currentIndex: renderedCurrentIndex });
+      drawn = drawChart(canvas, dayHours(state.weather.data), {
+        currentIndex: renderedCurrentIndex,
+        ...rangeIndices(state.weather.data)
+      });
     } catch {
       drawn = false;
     }
@@ -251,9 +286,20 @@ export function createApp(root, deps = {}) {
     if (!drawn) el.forecast.querySelector('#hourly-table-details').open = true;
   }
 
-  function summarize(data) {
-    const daySummary = deriveDaySummary(data, DEFAULTS, { fromHour: outfitFromHour(data) });
+  function summarize(data, range = state.range) {
+    const { from, to } = outfitRange(data, range);
+    const daySummary = deriveDaySummary(data, DEFAULTS, { fromHour: from, toHour: to });
     return { daySummary, recommendation: recommendOutfit(daySummary, DEFAULTS, OUTFITS) };
+  }
+
+  function setRange(range) {
+    const { weather } = state;
+    if (!weather.data) return;
+    try {
+      setState({ range, ...summarize(weather.data, range) });
+    } catch {
+      setState({ range, weather: { ...weather, status: 'error', error: copy.weatherError } });
+    }
   }
 
   function applyForecast(data, { status = 'ready', isStale = false } = {}) {
@@ -297,6 +343,24 @@ export function createApp(root, deps = {}) {
     const button = event.target.closest('[data-action]');
     if (!button || button.disabled) return;
     if (button.dataset.action === 'refresh') loadWeather({ force: true });
+    if (button.dataset.action === 'range-now') {
+      setRange({ fromHour: null, toHour: DEFAULTS.dayEndHour });
+      // The Now button is gone once the range follows the clock again.
+      root.querySelector('#range-from')?.focus();
+    }
+  }
+
+  // Moving one end past the other drags the other end along.
+  function onChange(event) {
+    const select = event.target.closest?.('select[data-range]');
+    if (!select || !state.weather.data) return;
+    const hour = Number(select.value);
+    const { from, to } = outfitRange(state.weather.data);
+    setRange(
+      select.dataset.range === 'from'
+        ? { fromHour: hour, toHour: Math.max(to, hour) }
+        : { fromHour: hour < from ? hour : state.range.fromHour, toHour: hour }
+    );
   }
 
   function onResize() {
@@ -317,6 +381,7 @@ export function createApp(root, deps = {}) {
   }
 
   root.addEventListener('click', onClick);
+  root.addEventListener('change', onChange);
   win.addEventListener('resize', onResize);
   // Canvas text does not reflow: redraw once the web fonts have arrived.
   doc.fonts?.ready?.then(onResize);
@@ -338,6 +403,7 @@ export function createApp(root, deps = {}) {
       weatherController?.abort();
       clearInterval(clockTimer);
       root.removeEventListener('click', onClick);
+      root.removeEventListener('change', onChange);
       win.removeEventListener('resize', onResize);
     }
   };

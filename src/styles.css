@@ -391,6 +391,56 @@ ul {
   letter-spacing: -0.02em;
 }
 
+/* "For 09:00 – 22:00": the hours the outfit is for. */
+.outfit-header:has(+ .range-picker) {
+  margin-bottom: var(--space-md);
+}
+
+.range-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--space-lg);
+  color: var(--clr-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.range-select,
+.range-now {
+  min-height: 44px;
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-pill);
+  background: var(--clr-bg);
+  color: var(--clr-text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.range-select {
+  padding: 0 26px 0 12px;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 15px) 50%, calc(100% - 10px) 50%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  font-variant-numeric: tabular-nums;
+}
+
+.range-now {
+  padding: 0 14px;
+  background: var(--clr-accent);
+  border-color: transparent;
+}
+
+.range-select:hover,
+.range-now:hover {
+  border-color: var(--clr-muted);
+}
+
 .add-on {
   display: flex;
   align-items: flex-start;
@@ -618,6 +668,12 @@ ul {
   background: var(--clr-accent);
 }
 
+.swatch-range {
+  width: 14px;
+  height: 4px;
+  background: var(--clr-accent-strong);
+}
+
 .chart-container {
   overflow: hidden;
   border: 1px solid var(--clr-border);
@@ -682,6 +738,10 @@ ul {
 .hourly-table tr.is-now {
   background: rgb(244 206 106 / 0.32);
   font-weight: 700;
+}
+
+.hourly-table tr.is-outside > * {
+  opacity: 0.45;
 }
 
 .now-tag {

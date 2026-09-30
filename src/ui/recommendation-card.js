@@ -1,4 +1,4 @@
-import { copy } from '../copy.js';
+import { copy, formatters } from '../copy.js';
 import { ADD_ONS, GARMENTS, groupBySection } from '../data/outfits.js';
 import { escapeHtml } from './html.js';
 import { icon } from './icons.js';
@@ -53,7 +53,31 @@ function renderDetails(daySummary) {
     </details>`;
 }
 
-function cardHeader(outfit) {
+function hourSelect(id, which, selected, { min, max }) {
+  const options = [];
+  for (let hour = min; hour <= max; hour += 1) {
+    options.push(`<option value="${hour}"${hour === selected ? ' selected' : ''}>${escapeHtml(formatters.hourLabel(hour))}</option>`);
+  }
+  return `<select id="${id}" class="range-select" data-range="${which}">${options.join('')}</select>`;
+}
+
+// "For 09:00 – 22:00": the hours the outfit is for, today only. `Now` shows
+// once the start no longer follows the clock.
+function renderRangePicker(range) {
+  const now = range.followsNow
+    ? ''
+    : `<button type="button" id="range-now" class="range-now" data-action="range-now" aria-label="${escapeHtml(copy.rangeNowLabel(formatters.hourLabel(range.max)))}">${escapeHtml(copy.rangeNow)}</button>`;
+  return `
+    <div class="range-picker" role="group" aria-label="${escapeHtml(copy.rangeLabel)}">
+      <label for="range-from">${escapeHtml(copy.rangeFrom)}</label>
+      ${hourSelect('range-from', 'from', range.from, range)}
+      <span aria-hidden="true">–</span><label for="range-to" class="visually-hidden">${escapeHtml(copy.rangeTo)}</label>
+      ${hourSelect('range-to', 'to', range.to, range)}
+      ${now}
+    </div>`;
+}
+
+function cardHeader(outfit, range) {
   return `
     <div class="outfit-header">
       <span class="outfit-icon" aria-hidden="true">${icon('sparkle')}</span>
@@ -61,10 +85,11 @@ function cardHeader(outfit) {
         <h2 id="outfit-heading" class="eyebrow">${escapeHtml(copy.putOnToday)}</h2>
         ${outfit ? `<p class="outfit-name" data-outfit-id="${escapeHtml(outfit.id)}">${escapeHtml(outfit.label)}</p>` : ''}
       </div>
-    </div>`;
+    </div>
+    ${outfit && range ? renderRangePicker(range) : ''}`;
 }
 
-export function renderRecommendationCard({ outfit, recommendation, daySummary, weatherStatus }) {
+export function renderRecommendationCard({ outfit, recommendation, daySummary, weatherStatus, range }) {
   if (!outfit) {
     const body =
       weatherStatus === 'loading' || weatherStatus === 'idle'
@@ -81,7 +106,7 @@ export function renderRecommendationCard({ outfit, recommendation, daySummary, w
 
   return `
     <div class="outfit-card">
-      ${cardHeader(outfit)}
+      ${cardHeader(outfit, range)}
       ${addOns}
       <div class="outfit-body">
         <div class="clothing-stack" role="group" aria-label="${escapeHtml(copy.garmentListLabel)}">
