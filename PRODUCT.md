@@ -49,7 +49,7 @@ The app should feel useful in under **10 seconds**, without requiring an account
 - Berlin as the preconfigured location (`52.5200, 13.4050`, `Europe/Berlin`).
 - Fetch the current conditions and today’s hourly forecast.
 - Display a composable, in-app SVG outfit illustration — no third-party image assets required.
-- Display eight canonical outfit combinations built from one garment catalog.
+- Display nine canonical outfit combinations built from one garment catalog.
 - Make a deterministic rules recommendation.
 - Render an hourly temperature/apparent-temperature line plus precipitation-probability bars.
 - Handle loading, stale, network, and API error states gracefully.
@@ -167,6 +167,7 @@ Use stable IDs. Visible labels should be friendly and correct the obvious misspe
 | ID | Display name | Garments |
 | --- | --- | --- |
 | `sunny-hot` | Sunny & hot | Sun hat; short-sleeve T-shirt; shorts; sandals |
+| `warm-dry` | Warm & dry | Short-sleeve T-shirt; shorts; sandals |
 | `mild-dry` | Mild & dry | Long-sleeve T-shirt; sweater; long pants; socks; closed shoes |
 | `fresh-dry` | Fresh & dry | Long-sleeve T-shirt; sweater; jacket; long pants; socks; closed shoes |
 | `cold-dry` | Cold & dry | Hat; neck warmer; long-sleeve T-shirt; sweater; jacket; long pants; socks; closed shoes |
@@ -211,7 +212,7 @@ Outfits that already protect against rain carry the `waterproof` tag.
 
 ### 5.2 “Other combinations”
 
-The catalog is exactly the eight combinations above. Add further records, and garments, only in `src/data/outfits.js`.
+The catalog is exactly the nine combinations above. Add further records, and garments, only in `src/data/outfits.js`.
 
 Later combinations can be added as catalog entries with the same fields. Examples to consider only after a user specifies their actual wardrobe:
 
@@ -230,7 +231,7 @@ export const DEFAULTS = {
   timezone: 'Europe/Berlin',
   dayStartHour: 7,
   dayEndHour: 22,
-  hotMinimumApparentC: 22,
+  hotMinimumApparentC: 20,
   mildMinimumApparentC: 16,
   freshMinimumApparentC: 9,
   sunnyMaximumCloudCover: 35,
@@ -274,17 +275,19 @@ Rules, in order:
 1. Evaluate only the current hour to 22:00 local Berlin time (within 07:00–22:00).
 2. rainLikely = any hourly precipitation probability >= 50
                 OR total precipitation in the window >= 0.3 mm.
-3. hotAndSunny = rainLikely is false
-                 AND minimum apparent temperature >= 22°C
+3. hot = rainLikely is false
+         AND minimum apparent temperature >= 20°C.
+   hotAndSunny = hot
                  AND at least 65% of window hours have cloud cover <= 35%.
 4. If minimum apparent temperature < 0°C: choose super-cold (the snowsuit is waterproof, so this wins over rain).
 5. Else if rainLikely AND total precipitation >= 5 mm: choose super-rain.
 6. Else if rainLikely AND minimum apparent temperature < 12°C: choose cold-rain.
 7. Else if rainLikely: choose hot-rain.
 8. Else if hotAndSunny: choose sunny-hot.
-9. Else if minimum apparent temperature >= 16°C: choose mild-dry.
-10. Else if minimum apparent temperature >= 9°C: choose fresh-dry.
-11. Else: choose cold-dry.
+9. Else if hot: choose warm-dry (warmth decides the light clothes; sunshine only adds the sun hat).
+10. Else if minimum apparent temperature >= 16°C: choose mild-dry.
+11. Else if minimum apparent temperature >= 9°C: choose fresh-dry.
+12. Else: choose cold-dry.
 ```
 
 Do not force the `cold-rain` outfit on a warm rainy day; `hot-rain` keeps the lighter layers and swaps in a rain jacket and waterproof shoes.
@@ -631,7 +634,7 @@ Use deterministic fixtures, never live APIs, in unit tests.
 | Module | Cases |
 | --- | --- |
 | `forecast.js` | Align parallel provider arrays by index; select only 07:00–22:00 Berlin hours; find the current hour; map known and unknown WMO codes; handle missing optional values. |
-| `recommendation.js` | Hot/sunny/dry → `sunny-hot`; mild/dry → `mild-dry`; fresh/dry → `fresh-dry`; cold/dry → `cold-dry`; cold/rainy → `cold-rain`; warm/rainy → dry base with rain-gear add-on. |
+| `recommendation.js` | Hot/sunny/dry → `sunny-hot`; hot/cloudy/dry → `warm-dry`; mild/dry → `mild-dry`; fresh/dry → `fresh-dry`; cold/dry → `cold-dry`; cold/rainy → `cold-rain`; warm/rainy → dry base with rain-gear add-on. |
 | `weather-service.js` | Correct `URLSearchParams`; normalized success response; API error; malformed payload; 8-second abort; one DWD-to-auto fallback. |
 
 ### 9.2 DOM/integration tests
@@ -671,7 +674,7 @@ The prototype is complete when all of the following are true:
 2. `npm run test` completes successfully with coverage of all outfit branches.
 3. The application loads Berlin weather and selects a rules-based outfit.
 4. The hourly chart and accessible table use the same normalized forecast data.
-5. The eight catalog outfit combinations appear correctly with accurate garment lists and SVG layers.
+5. The nine catalog outfit combinations appear correctly with accurate garment lists and SVG layers.
 6. UI error states are clear, non-technical, and never reveal a raw provider response.
 7. Attribution to Open-Meteo/DWD appears in the footer, consistent with the provider’s CC BY attribution requirement.
 

@@ -18,9 +18,9 @@ const recommendFor = (name) => {
 };
 
 describe('outfit catalog', () => {
-  it('has exactly the eight canonical outfits', () => {
+  it('has exactly the nine canonical outfits', () => {
     expect(OUTFITS.map((outfit) => outfit.id)).toEqual([
-      'sunny-hot', 'mild-dry', 'fresh-dry', 'cold-dry', 'hot-rain', 'cold-rain', 'super-rain', 'super-cold'
+      'sunny-hot', 'warm-dry', 'mild-dry', 'fresh-dry', 'cold-dry', 'hot-rain', 'cold-rain', 'super-rain', 'super-cold'
     ]);
   });
 
@@ -144,6 +144,7 @@ describe('deriveDaySummary', () => {
 describe('recommendOutfit', () => {
   it.each([
     ['sunny-hot', 'sunny-hot'],
+    ['warm-dry', 'warm-dry'],
     ['mild-dry', 'mild-dry'],
     ['fresh-dry', 'fresh-dry'],
     ['cold-dry', 'cold-dry'],
@@ -206,14 +207,30 @@ describe('recommendOutfit', () => {
     expect(at(11.9)).toBe('cold-rain');
   });
 
-  it('does not treat a hot but cloudy day as sunny', () => {
+  it('dresses a hot but cloudy day lightly, without the sun hat', () => {
     const forecast = normalizeForecast(buildRawForecast({ perHour: () => ({ apparent: 25, cloudCover: 80 }) }));
-    expect(recommendOutfit(deriveDaySummary(forecast)).outfitId).toBe('mild-dry');
+    const summary = deriveDaySummary(forecast);
+    expect(summary.hotAndSunny).toBe(false);
+    expect(recommendOutfit(summary).outfitId).toBe('warm-dry');
+  });
+
+  it('dresses a warm overcast afternoon that cools to 20°C in the evening lightly', () => {
+    const afternoon = (cloudCover) =>
+      normalizeForecast(
+        buildRawForecast({ perHour: (hour) => ({ apparent: hour >= 15 ? 23 - (hour - 15) * 0.5 : 24, cloudCover }) })
+      );
+    const window = { fromHour: 15, toHour: 22 };
+    const overcast = deriveDaySummary(afternoon(95), DEFAULTS, window);
+    expect(overcast.minApparentC).toBe(20);
+    expect(recommendOutfit(overcast).outfitId).toBe('warm-dry');
+    expect(recommendOutfit(deriveDaySummary(afternoon(10), DEFAULTS, window)).outfitId).toBe('sunny-hot');
   });
 
   it('uses boundaries from DEFAULTS', () => {
     const at = (apparent) =>
       recommendOutfit(deriveDaySummary(normalizeForecast(buildRawForecast({ perHour: () => ({ apparent, cloudCover: 80 }) })))).outfitId;
+    expect(at(20)).toBe('warm-dry');
+    expect(at(19.9)).toBe('mild-dry');
     expect(at(16)).toBe('mild-dry');
     expect(at(15.9)).toBe('fresh-dry');
     expect(at(9)).toBe('fresh-dry');

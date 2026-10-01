@@ -44,6 +44,13 @@ export const OUTFITS = [
     tags: ['dry', 'warm', 'sunny']
   },
   {
+    id: 'warm-dry',
+    label: 'Warm & dry',
+    description: 'Light clothes for a dry, warm day, sunny or not.',
+    garments: ['shortTee', 'shorts', 'sandals'],
+    tags: ['dry', 'warm']
+  },
+  {
     id: 'mild-dry',
     label: 'Mild & dry',
     description: 'Layers for a mild, cloudy or partly cloudy dry day.',

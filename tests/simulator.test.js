@@ -17,6 +17,7 @@ describe('weather scenarios', () => {
   // Keeps the simulator honest when the thresholds move.
   const EXPECTED = {
     'sunny-hot': 'sunny-hot',
+    'warm-dry': 'warm-dry',
     'mild-dry': 'mild-dry',
     'fresh-dry': 'fresh-dry',
     'cold-dry': 'cold-dry',

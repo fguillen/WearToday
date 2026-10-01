@@ -81,6 +81,11 @@ export const SCENARIOS = {
     inDay(hour)
       ? { temperature: 24 + (hour - 8) * 0.6, apparent: 23 + (hour - 8) * 0.6, cloudCover: 10, weatherCode: 0, rainProbability: 5 }
       : { temperature: 17, apparent: 16, cloudCover: 30, weatherCode: 1, rainProbability: hour === 23 ? 80 : 0 },
+  // Warm, overcast and dry: light clothes without the sun hat.
+  'warm-dry': (hour) =>
+    inDay(hour)
+      ? { temperature: 23 + (hour - 8) * 0.2, apparent: 21 + (hour - 8) * 0.2, cloudCover: 85, weatherCode: 3, rainProbability: 10 }
+      : { temperature: 18, apparent: 17, cloudCover: 85, weatherCode: 3 },
   // Mild, partly cloudy, dry.
   'mild-dry': (hour) =>
     inDay(hour)

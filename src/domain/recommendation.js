@@ -10,7 +10,7 @@ export const DEFAULTS = Object.freeze({
   dayStartHour: 7,
   dayEndHour: 24,
   outfitEndHour: 22,
-  hotMinimumApparentC: 22,
+  hotMinimumApparentC: 20,
   mildMinimumApparentC: 16,
   freshMinimumApparentC: 9,
   sunnyMaximumCloudCover: 35,
@@ -68,10 +68,8 @@ export function deriveDaySummary(
   const sunnyFraction = Math.round((sunnyHours / windowHours.length) * 100) / 100;
   const maxWindKmh = Math.round(Math.max(0, ...windowHours.map((hour) => hour.windKmh ?? 0)));
 
-  const hotAndSunny =
-    !rainLikely &&
-    minApparentC >= defaults.hotMinimumApparentC &&
-    sunnyHours / windowHours.length >= defaults.sunnyMinimumFraction;
+  const hot = !rainLikely && minApparentC >= defaults.hotMinimumApparentC;
+  const hotAndSunny = hot && sunnyHours / windowHours.length >= defaults.sunnyMinimumFraction;
 
   const firstRainHour = windowHours.find(
     (hour) =>
@@ -93,6 +91,7 @@ export function deriveDaySummary(
     maxRainProbability,
     precipitationTotalMm,
     sunnyFraction,
+    hot,
     hotAndSunny,
     maxWindKmh
   };
@@ -128,9 +127,11 @@ function buildReasons(summary, defaults, endHour) {
   return reasons;
 }
 
-// Picks the dry base outfit (rules 5–8) ignoring rain.
+// Picks the dry base outfit (rules 8–12) ignoring rain. Warmth decides how
+// light the clothes are; sunshine only adds the sun hat.
 function chooseDryBase(summary, defaults) {
   if (summary.hotAndSunny) return 'sunny-hot';
+  if (summary.hot) return 'warm-dry';
   if (summary.minApparentC >= defaults.mildMinimumApparentC) return 'mild-dry';
   if (summary.minApparentC >= defaults.freshMinimumApparentC) return 'fresh-dry';
   return 'cold-dry';
